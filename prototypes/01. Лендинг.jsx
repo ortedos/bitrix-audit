@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Card,
@@ -20,7 +20,6 @@ import {
   ShieldCheck,
   Rocket,
   Activity,
-  Timer,
   Settings2,
   ExternalLink,
   Sparkles,
@@ -106,7 +105,7 @@ function InfoHint({ title, text }: { title: string; text: string }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button aria-label={`Подробнее: ${title}`} className="inline-flex items-center justify-center h-5 w-5 rounded-full border text-slate-600 hover:bg-slate-50">
+        <button aria-label={`Подробнее: ${title}`} className="inline-flex items-center justify-center h-5 w-5 rounded-full border text-slate-600 hover:bg-slate-50 cursor-help">
           <HelpCircle className="h-3.5 w-3.5" />
         </button>
       </PopoverTrigger>
@@ -138,39 +137,89 @@ function TrustBar() {
 }
 
 function ReportPreview() {
-  // Визуал как в ранней версии (скелетоны), но с информативными чипами‑лейблами
+  // Визуал как в ранней версии (скелетоны) + понятные чипы с пояснениями по «?»-иконке
   const chips = [
-    { label: "Сводка 0–100", tone: "border-blue-600 text-blue-700" },
-    { label: "CWV: LCP/INP/CLS", tone: "border-blue-600 text-blue-700" },
-    { label: "Техника", tone: "border-slate-400 text-slate-700" },
-    { label: "Доступность", tone: "border-slate-400 text-slate-700" },
-    { label: "Контент/SEO", tone: "border-slate-400 text-slate-700" },
-    { label: "UX", tone: "border-slate-400 text-slate-700" },
-    { label: "Backlog P0–P3", tone: "border-rose-600 text-rose-700" },
+    {
+      label: "Сводка 0–100",
+      tone: "border-blue-600 text-blue-700",
+      hintTitle: "Сводка",
+      hintText:
+        "Общий индекс качества сайта: 100 − сумма штрафов по тестам. В отчёте есть динамика и сравнение с бенчмарком.",
+    },
+    {
+      label: "CWV: LCP/INP/CLS",
+      tone: "border-blue-600 text-blue-700",
+      hintTitle: "Core Web Vitals",
+      hintText:
+        "Ключевые метрики опыта: скорость отрисовки (LCP), отзывчивость (INP), стабильность макета (CLS). Источник — PSI/Lighthouse.",
+    },
+    {
+      label: "Техника",
+      tone: "border-slate-400 text-slate-700",
+      hintTitle: "Технические проверки",
+      hintText:
+        "Ошибки ресурсов, кеширование, размер JS/CSS, 3rd‑party скрипты, HTTP/2/3, заголовки, редиректы.",
+    },
+    {
+      label: "Доступность",
+      tone: "border-slate-400 text-slate-700",
+      hintTitle: "Доступность (WCAG)",
+      hintText:
+        "Контраст ≥4.5:1, видимый фокус, альтернативы для изображений, навигация с клавиатуры, валидные подписи форм.",
+    },
+    {
+      label: "Контент/SEO",
+      tone: "border-slate-400 text-slate-700",
+      hintTitle: "Контент и SEO",
+      hintText:
+        "Title, H1‑иерархия, мета‑теги, микроразметка, дубли и каноникал, index/noindex, карта сайта.",
+    },
+    {
+      label: "UX",
+      tone: "border-slate-400 text-slate-700",
+      hintTitle: "Пользовательский опыт",
+      hintText:
+        "Поиск и навигация, формы и ошибки, мобильные сценарии, скорость ключевых путей, пустые состояния.",
+    },
+    {
+      label: "Backlog P0–P3",
+      tone: "border-rose-600 text-rose-700",
+      hintTitle: "Backlog",
+      hintText:
+        "Очередь задач с приоритетами: P0 — критично, далее P1–P3. Каждая задача: ‘почему важно’, ‘как исправить’, ‘ресурсы’.",
+    },
   ];
   return (
     <div className="relative p-1 rounded-2xl bg-gradient-to-r from-blue-600 to-rose-600">
       <div className="rounded-xl bg-white p-4">
         <div className="text-sm text-slate-600 mb-2">Превью полного отчёта</div>
-        {/* Чипы‑легенда (информативность) */}
+        {/* Чипы‑легенда с иконкой «?» */}
         <div className="flex flex-wrap gap-2 mb-3">
-          {chips.map(c => (
-            <span key={c.label} className={`text-xs inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border ${c.tone}`}>{c.label}</span>
+          {chips.map((c) => (
+            <span
+              key={c.label}
+              className={`text-xs inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border ${c.tone}`}
+            >
+              {c.label}
+              <InfoHint title={c.hintTitle} text={c.hintText} />
+            </span>
           ))}
         </div>
         {/* Скелетоны (визуал «как раньше») */}
         <div className="grid gap-2 opacity-85">
-          {[1,2,3,4,5].map((n) => (
+          {[1, 2, 3, 4, 5].map((n) => (
             <div key={n} className="flex items-center justify-between p-2 rounded-lg border">
               <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-rose-500"/>
-                <div className="h-3 w-40 bg-slate-100 rounded"/>
+                <div className="h-2 w-2 rounded-full bg-rose-500" />
+                <div className="h-3 w-40 bg-slate-100 rounded" />
               </div>
-              <div className="h-3 w-16 bg-slate-100 rounded"/>
+              <div className="h-3 w-16 bg-slate-100 rounded" />
             </div>
           ))}
         </div>
-        <div className="mt-3 text-xs text-slate-500">Демо‑данные. Финальный отчёт доступен после регистрации и запуска полного аудита.</div>
+        <div className="mt-3 text-xs text-slate-500">
+          Демо‑данные. Финальный отчёт доступен после регистрации и запуска полного аудита.
+        </div>
       </div>
     </div>
   );
@@ -191,14 +240,14 @@ function AuthDialog({ open, onOpenChange, mode }: { open: boolean; onOpenChange:
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             {/* Соц‑провайдеры 2025 RU */}
-            <Button variant="outline" className="justify-center"><img alt="Google" src="https://www.google.com/favicon.ico" className="h-4 w-4 mr-2"/>Google</Button>
-            <Button variant="outline" className="justify-center"><img alt="Yandex" src="https://yastatic.net/s3/home-static/_/f/ya-logo.svg" className="h-4 w-4 mr-2"/>Yandex ID</Button>
-            <Button variant="outline" className="justify-center"><img alt="VK" src="https://vk.com/images/icons/favicons/fav_logo.ico" className="h-4 w-4 mr-2"/>VK ID</Button>
-            <Button variant="outline" className="justify-center"><img alt="Gosuslugi" src="https://www.gosuslugi.ru/favicon.ico" className="h-4 w-4 mr-2"/>Госуслуги</Button>
-            <Button variant="outline" className="justify-center"><img alt="Sber ID" src="https://www.sberbank.com/favicon.ico" className="h-4 w-4 mr-2"/>Сбер ID</Button>
-            <Button variant="outline" className="justify-center"><img alt="Mail.ru" src="https://mail.ru/favicon.ico" className="h-4 w-4 mr-2"/>Mail.ru</Button>
-            <Button variant="outline" className="justify-center"><img alt="Apple" src="https://www.apple.com/favicon.ico" className="h-4 w-4 mr-2"/>Apple ID</Button>
-            <Button variant="outline" className="justify-center"><img alt="Telegram" src="https://web.telegram.org/favicon.ico" className="h-4 w-4 mr-2"/>Telegram</Button>
+            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Google" src="https://www.google.com/favicon.ico" className="h-4 w-4 mr-2"/>Google</Button>
+            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Yandex" src="https://yastatic.net/s3/home-static/_/f/ya-logo.svg" className="h-4 w-4 mr-2"/>Yandex ID</Button>
+            <Button variant="outline" className="justify-center cursor-pointer"><img alt="VK" src="https://vk.com/images/icons/favicons/fav_logo.ico" className="h-4 w-4 mr-2"/>VK ID</Button>
+            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Gosuslugi" src="https://www.gosuslugi.ru/favicon.ico" className="h-4 w-4 mr-2"/>Госуслуги</Button>
+            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Sber ID" src="https://www.sberbank.com/favicon.ico" className="h-4 w-4 mr-2"/>Сбер ID</Button>
+            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Mail.ru" src="https://mail.ru/favicon.ico" className="h-4 w-4 mr-2"/>Mail.ru</Button>
+            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Apple" src="https://www.apple.com/favicon.ico" className="h-4 w-4 mr-2"/>Apple ID</Button>
+            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Telegram" src="https://web.telegram.org/favicon.ico" className="h-4 w-4 mr-2"/>Telegram</Button>
           </div>
 
           <div className="relative text-center text-xs text-slate-500 my-1">
@@ -209,7 +258,7 @@ function AuthDialog({ open, onOpenChange, mode }: { open: boolean; onOpenChange:
             E‑mail
             <div className="flex gap-2">
               <Input type="email" placeholder="you@company.ru" aria-label="E‑mail"/>
-              <Button>{isSignup ? "Далее" : "Войти"}</Button>
+              <Button className="cursor-pointer">{isSignup ? "Далее" : "Войти"}</Button>
             </div>
           </label>
 
@@ -217,7 +266,7 @@ function AuthDialog({ open, onOpenChange, mode }: { open: boolean; onOpenChange:
             Телефон
             <div className="flex gap-2">
               <Input type="tel" placeholder="+7 (___) ___‑__‑__" aria-label="Телефон"/>
-              <Button variant="outline">Получить код</Button>
+              <Button variant="outline" className="cursor-pointer">Получить код</Button>
             </div>
           </label>
 
@@ -254,6 +303,16 @@ export default function LeadMagnetScreen() {
   const [signupOpen, setSignupOpen] = useState(false);
 
   const canRun = useMemo(() => url.trim().length > 0 && botChecked, [url, botChecked]);
+
+  // ====== ПРОСТЕЙШИЕ ТЕСТЫ (dev) ======
+  useEffect(() => {
+    // Валидный короткий домен
+    console.assert(validateUrl("ya.ru"), "validateUrl должен принимать короткие домены (ya.ru)");
+    // Валидный с протоколом
+    console.assert(validateUrl("https://example.com"), "validateUrl должен принимать https://example.com");
+    // Невалидный ввод
+    console.assert(!validateUrl("not_a_url"), "validateUrl должен отклонять невалидные строки");
+  }, []);
 
   const onSubmit = async () => {
     setError(null);
@@ -315,9 +374,9 @@ export default function LeadMagnetScreen() {
             <div className="text-base font-semibold text-slate-800">{BRAND.name}</div>
           </div>
           <nav className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="text-slate-700"><a href="/pricing">Цены</a></Button>
-            <Button variant="ghost" size="sm" className="text-slate-700" onClick={() => setSigninOpen(true)}>Вход</Button>
-            <Button size="sm" className="rounded-2xl bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setSignupOpen(true)}>Зарегистрироваться</Button>
+            <Button asChild variant="ghost" size="sm" className="text-slate-700 cursor-pointer"><a href="/pricing">Цены</a></Button>
+            <Button variant="ghost" size="sm" className="text-slate-700 cursor-pointer" onClick={() => setSigninOpen(true)}>Вход</Button>
+            <Button size="sm" className="rounded-2xl bg-blue-600 hover:bg-blue-700 text-white cursor-pointer" onClick={() => setSignupOpen(true)}>Зарегистрироваться</Button>
           </nav>
         </header>
 
@@ -344,13 +403,13 @@ export default function LeadMagnetScreen() {
                       className="focus-visible:ring-blue-600"
                     />
                   </div>
-                  <Button onClick={onSubmit} disabled={!canRun || loading} className="md:w-[200px] bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button onClick={onSubmit} disabled={!canRun || loading} className="md:w-[200px] bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
                     <Rocket className="h-4 w-4 mr-2"/>
                     Проверить
                   </Button>
                 </div>
 
-                <label className="flex items-center gap-2 text-sm text-slate-700">
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
                   <Checkbox checked={botChecked} onCheckedChange={(v) => setBotChecked(Boolean(v))} aria-label="Я не робот" />
                   Я не робот (reCAPTCHA)
                 </label>
@@ -395,7 +454,7 @@ export default function LeadMagnetScreen() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Score value={score!} />
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white" asChild>
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer" asChild>
                     <a href="/signup">Сделать полный аудит</a>
                   </Button>
                   <div className="text-xs text-slate-600">Полный отчёт содержит детальный список проблем и рекомендации.
@@ -439,27 +498,27 @@ export default function LeadMagnetScreen() {
         <div className="fixed bottom-4 right-4">
           <Popover open={devOpen} onOpenChange={setDevOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="rounded-2xl"><Settings2 className="h-4 w-4 mr-2"/>Dev-панель</Button>
+              <Button variant="outline" size="sm" className="rounded-2xl cursor-pointer"><Settings2 className="h-4 w-4 mr-2"/>Dev-панель</Button>
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="text-sm font-medium mb-2">Состояния</div>
               <div className="space-y-2">
-                <label className="flex items-center justify-between text-sm">
+                <label className="flex items-center justify-between text-sm cursor-pointer">
                   <span>Rate limit (30 rpm/IP)</span>
                   <Switch checked={simulateRateLimit} onCheckedChange={setSimulateRateLimit} />
                 </label>
-                <label className="flex items-center justify-between text-sm">
+                <label className="flex items-center justify-between text-sm cursor-pointer">
                   <span>API ошибка</span>
                   <Switch checked={simulateApiError} onCheckedChange={setSimulateApiError} />
                 </label>
-                <label className="flex items-center justify-between text-sm">
+                <label className="flex items-center justify-between text-sm cursor-pointer">
                   <span>Антибот‑блокировка</span>
                   <Switch checked={simulateAntiBot} onCheckedChange={setSimulateAntiBot} />
                 </label>
               </div>
               <div className="mt-4 text-sm font-medium mb-2">Тариф</div>
               <Select value={plan} onValueChange={(v: any) => setPlan(v)}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Тариф" /></SelectTrigger>
+                <SelectTrigger className="w-full cursor-pointer"><SelectValue placeholder="Тариф" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Free">Free</SelectItem>
                   <SelectItem value="Pro">Pro</SelectItem>
