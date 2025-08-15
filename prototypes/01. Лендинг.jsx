@@ -25,6 +25,10 @@ import {
   Sparkles,
   Star,
   HelpCircle,
+  Search,
+  Briefcase,
+  Building2,
+  User as UserIcon,
 } from "lucide-react";
 import {
   Dialog,
@@ -74,6 +78,7 @@ function Score({ value }: { value: number }) {
 // ====== ТИПЫ ======
  type Priority = "P0" | "P1" | "P2" | "P3";
  type HeroVariant = "A" | "B";
+ type UserRole = "studio" | "seo" | "owner" | "agency";
  interface Issue { id: string; title: string; priority: Priority; }
 
 const sampleIssues: Issue[] = [
@@ -251,6 +256,22 @@ function HeroHeadline({ variant }: { variant: HeroVariant }) {
 
 function AuthDialog({ open, onOpenChange, mode }: { open: boolean; onOpenChange: (v: boolean) => void; mode: "signin" | "signup" }) {
   const isSignup = mode === "signup";
+  const [role, setRole] = useState<UserRole | null>(null);
+
+  const roles: { id: UserRole; title: string; desc: string; icon: React.ReactNode }[] = [
+    { id: "studio", title: "Веб‑студия",         desc: "Аудит клиентов, отчёты, WL",          icon: <Briefcase className="h-4 w-4"/> },
+    { id: "seo",    title: "SEO‑специалист",    desc: "CWV и техаудит для роста",            icon: <Search className="h-4 w-4"/> },
+    { id: "owner",  title: "Владелец сайта",    desc: "Сводка и чек‑лист",                   icon: <UserIcon className="h-4 w-4"/> },
+    { id: "agency", title: "Агентство/интегр.", desc: "White‑label, экспорт, интеграции",     icon: <Building2 className="h-4 w-4"/> },
+  ];
+
+  const choose = (r: UserRole) => {
+    setRole(r);
+    try { localStorage.setItem("ba.role", r); } catch {}
+  };
+
+  const roleRequired = isSignup && !role;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -262,16 +283,45 @@ function AuthDialog({ open, onOpenChange, mode }: { open: boolean; onOpenChange:
         </DialogHeader>
 
         <div className="space-y-3">
+          {isSignup && (
+            <div className="space-y-2">
+              <div className="text-sm font-medium flex items-center gap-2">
+                Кто вы?
+                <InfoHint title="Почему спрашиваем" text="От выбранной роли зависит структура личного кабинета (виджеты, фильтры, WL/экспорт). Можно изменить позже в настройках." />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {roles.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => choose(r.id)}
+                    aria-pressed={role === r.id}
+                    className={`text-left cursor-pointer rounded-xl border p-3 hover:bg-slate-50 flex items-start gap-3 ${role === r.id ? "ring-2 ring-blue-600 bg-blue-50 border-blue-200" : ""}`}
+                  >
+                    <div className="mt-0.5 text-slate-600">{r.icon}</div>
+                    <div>
+                      <div className="font-medium">{r.title}</div>
+                      <div className="text-xs text-slate-600">{r.desc}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {roleRequired && (
+                <div className="text-xs text-rose-600">Выберите роль — это нужно для персонализации кабинета.</div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-2">
             {/* Соц‑провайдеры 2025 RU */}
-            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Google" src="https://www.google.com/favicon.ico" className="h-4 w-4 mr-2"/>Google</Button>
-            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Yandex" src="https://yastatic.net/s3/home-static/_/f/ya-logo.svg" className="h-4 w-4 mr-2"/>Yandex ID</Button>
-            <Button variant="outline" className="justify-center cursor-pointer"><img alt="VK" src="https://vk.com/images/icons/favicons/fav_logo.ico" className="h-4 w-4 mr-2"/>VK ID</Button>
-            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Gosuslugi" src="https://www.gosuslugi.ru/favicon.ico" className="h-4 w-4 mr-2"/>Госуслуги</Button>
-            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Sber ID" src="https://www.sberbank.com/favicon.ico" className="h-4 w-4 mr-2"/>Сбер ID</Button>
-            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Mail.ru" src="https://mail.ru/favicon.ico" className="h-4 w-4 mr-2"/>Mail.ru</Button>
-            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Apple" src="https://www.apple.com/favicon.ico" className="h-4 w-4 mr-2"/>Apple ID</Button>
-            <Button variant="outline" className="justify-center cursor-pointer"><img alt="Telegram" src="https://web.telegram.org/favicon.ico" className="h-4 w-4 mr-2"/>Telegram</Button>
+            <Button variant="outline" className="justify-center cursor-pointer" disabled={roleRequired}><img alt="Google" src="https://www.google.com/favicon.ico" className="h-4 w-4 mr-2"/>Google</Button>
+            <Button variant="outline" className="justify-center cursor-pointer" disabled={roleRequired}><img alt="Yandex" src="https://yastatic.net/s3/home-static/_/f/ya-logo.svg" className="h-4 w-4 mr-2"/>Yandex ID</Button>
+            <Button variant="outline" className="justify-center cursor-pointer" disabled={roleRequired}><img alt="VK" src="https://vk.com/images/icons/favicons/fav_logo.ico" className="h-4 w-4 mr-2"/>VK ID</Button>
+            <Button variant="outline" className="justify-center cursor-pointer" disabled={roleRequired}><img alt="Gosuslugi" src="https://www.gosuslugi.ru/favicon.ico" className="h-4 w-4 mr-2"/>Госуслуги</Button>
+            <Button variant="outline" className="justify-center cursor-pointer" disabled={roleRequired}><img alt="Sber ID" src="https://www.sberbank.com/favicon.ico" className="h-4 w-4 mr-2"/>Сбер ID</Button>
+            <Button variant="outline" className="justify-center cursor-pointer" disabled={roleRequired}><img alt="Mail.ru" src="https://mail.ru/favicon.ico" className="h-4 w-4 mr-2"/>Mail.ru</Button>
+            <Button variant="outline" className="justify-center cursor-pointer" disabled={roleRequired}><img alt="Apple" src="https://www.apple.com/favicon.ico" className="h-4 w-4 mr-2"/>Apple ID</Button>
+            <Button variant="outline" className="justify-center cursor-pointer" disabled={roleRequired}><img alt="Telegram" src="https://web.telegram.org/favicon.ico" className="h-4 w-4 mr-2"/>Telegram</Button>
           </div>
 
           <div className="relative text-center text-xs text-slate-500 my-1">
@@ -282,7 +332,7 @@ function AuthDialog({ open, onOpenChange, mode }: { open: boolean; onOpenChange:
             E‑mail
             <div className="flex gap-2">
               <Input type="email" placeholder="you@company.ru" aria-label="E‑mail"/>
-              <Button className="cursor-pointer">{isSignup ? "Далее" : "Войти"}</Button>
+              <Button className="cursor-pointer" disabled={roleRequired}>{isSignup ? "Далее" : "Войти"}</Button>
             </div>
           </label>
 
@@ -290,7 +340,7 @@ function AuthDialog({ open, onOpenChange, mode }: { open: boolean; onOpenChange:
             Телефон
             <div className="flex gap-2">
               <Input type="tel" placeholder="+7 (___) ___‑__‑__" aria-label="Телефон"/>
-              <Button variant="outline" className="cursor-pointer">Получить код</Button>
+              <Button variant="outline" className="cursor-pointer" disabled={roleRequired}>Получить код</Button>
             </div>
           </label>
 
@@ -341,6 +391,14 @@ export default function LeadMagnetScreen() {
     console.assert(normalizeUrl("ya.ru").startsWith("https://"), "normalizeUrl должен подставлять https:// для коротких доменов");
     console.assert(validateUrl("http://ya.ru"), "validateUrl должен принимать http:// схемы");
     console.assert(!validateUrl(""), "validateUrl должен отклонять пустую строку");
+    // Роли — контроль перечисления и локального сохранения
+    const expectedRoles = ["studio","seo","owner","agency"] as const;
+    expectedRoles.forEach(r => console.assert(expectedRoles.includes(r), "Список ролей должен включать studio/seo/owner/agency"));
+    try {
+      localStorage.setItem("ba.role", "seo");
+      const v = localStorage.getItem("ba.role");
+      console.assert(v === "seo", "localStorage должен сохранять выбранную роль");
+    } catch {}
   }, []);
 
   const onSubmit = async () => {
@@ -574,7 +632,7 @@ export default function LeadMagnetScreen() {
 
         {/* ===== ФУТЕР ===== */}
         <footer className="pt-10 border-t">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-sm text-slate-600">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify_between gap-3 text-sm text-slate-600">
             <div>© {new Date().getFullYear()} ООО «Качество жизни»</div>
             <div className="flex items-center gap-4">
               <a className="hover:underline" href="#">FAQ</a>
