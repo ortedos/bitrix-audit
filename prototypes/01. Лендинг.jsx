@@ -73,6 +73,7 @@ function Score({ value }: { value: number }) {
 
 // ====== ТИПЫ ======
  type Priority = "P0" | "P1" | "P2" | "P3";
+ type HeroVariant = "A" | "B";
  interface Issue { id: string; title: string; priority: Priority; }
 
 const sampleIssues: Issue[] = [
@@ -137,58 +138,25 @@ function TrustBar() {
 }
 
 function ReportPreview() {
-  // Визуал как в ранней версии (скелетоны) + понятные чипы с пояснениями по «?»-иконке
+  // Визуал + понятные чипы с пояснениями
   const chips = [
-    {
-      label: "Сводка 0–100",
-      tone: "border-blue-600 text-blue-700",
-      hintTitle: "Сводка",
-      hintText:
-        "Общий индекс качества сайта: 100 − сумма штрафов по тестам. В отчёте есть динамика и сравнение с бенчмарком.",
-    },
-    {
-      label: "CWV: LCP/INP/CLS",
-      tone: "border-blue-600 text-blue-700",
-      hintTitle: "Core Web Vitals",
-      hintText:
-        "Ключевые метрики опыта: скорость отрисовки (LCP), отзывчивость (INP), стабильность макета (CLS). Источник — PSI/Lighthouse.",
-    },
-    {
-      label: "Техника",
-      tone: "border-slate-400 text-slate-700",
-      hintTitle: "Технические проверки",
-      hintText:
-        "Ошибки ресурсов, кеширование, размер JS/CSS, 3rd‑party скрипты, HTTP/2/3, заголовки, редиректы.",
-    },
-    {
-      label: "Доступность",
-      tone: "border-slate-400 text-slate-700",
-      hintTitle: "Доступность (WCAG)",
-      hintText:
-        "Контраст ≥4.5:1, видимый фокус, альтернативы для изображений, навигация с клавиатуры, валидные подписи форм.",
-    },
-    {
-      label: "Контент/SEO",
-      tone: "border-slate-400 text-slate-700",
-      hintTitle: "Контент и SEO",
-      hintText:
-        "Title, H1‑иерархия, мета‑теги, микроразметка, дубли и каноникал, index/noindex, карта сайта.",
-    },
-    {
-      label: "UX",
-      tone: "border-slate-400 text-slate-700",
-      hintTitle: "Пользовательский опыт",
-      hintText:
-        "Поиск и навигация, формы и ошибки, мобильные сценарии, скорость ключевых путей, пустые состояния.",
-    },
-    {
-      label: "Backlog P0–P3",
-      tone: "border-rose-600 text-rose-700",
-      hintTitle: "Backlog",
-      hintText:
-        "Очередь задач с приоритетами: P0 — критично, далее P1–P3. Каждая задача: ‘почему важно’, ‘как исправить’, ‘ресурсы’.",
-    },
+    { label: "Сводка 0–100", tone: "border-blue-600 text-blue-700", hintTitle: "Сводка", hintText: "Общий индекс качества: 100 − сумма штрафов. В отчёте есть динамика и бенчмарк." },
+    { label: "CWV: LCP/INP/CLS", tone: "border-blue-600 text-blue-700", hintTitle: "Core Web Vitals", hintText: "Скорость отрисовки (LCP), отзывчивость (INP), стабильность макета (CLS). Источник — PSI/Lighthouse." },
+    { label: "Техника", tone: "border-slate-400 text-slate-700", hintTitle: "Технические проверки", hintText: "Ошибки ресурсов, кеширование, размер JS/CSS, заголовки, редиректы." },
+    { label: "Доступность", tone: "border-slate-400 text-slate-700", hintTitle: "Доступность (WCAG)", hintText: "Контраст, фокус, alt‑тексты, клавиатурная навигация." },
+    { label: "Контент/SEO", tone: "border-slate-400 text-slate-700", hintTitle: "Контент и SEO", hintText: "Title/H1, мета, микроразметка, дубли, каноникал." },
+    { label: "UX", tone: "border-slate-400 text-slate-700", hintTitle: "Пользовательский опыт", hintText: "Поиск, формы, ошибки, мобильные сценарии, пустые состояния." },
+    { label: "Backlog P0–P3", tone: "border-rose-600 text-rose-700", hintTitle: "Backlog", hintText: "Очередь задач с приоритетами P0–P3 и рекомендациями." },
   ];
+
+  const previewRows = [
+    { k: "summary", left: "Итоговый балл", right: "78/100", sub: "Сильные стороны: структура, мобильная адаптация. Зоны роста: скорость, контраст." },
+    { k: "cwv", left: "Core Web Vitals", right: "LCP 2.8s · INP 220ms · CLS 0.04", sub: "LCP — требуется улучшение; INP/CLS — ок." },
+    { k: "tech", left: "Техника", right: "9 предупреждений", sub: "Большой JS‑бандл, нет кеш‑заголовков для изображений." },
+    { k: "a11y", left: "Доступность", right: "AA частично", sub: "Низкий контраст на кнопках, невидимый фокус у ссылок." },
+    { k: "seo", left: "Контент/SEO", right: "3 ошибки", sub: "Дубли title на 5 страницах, отсутствует description на главной." },
+  ];
+
   return (
     <div className="relative p-1 rounded-2xl bg-gradient-to-r from-blue-600 to-rose-600">
       <div className="rounded-xl bg-white p-4">
@@ -196,32 +164,88 @@ function ReportPreview() {
         {/* Чипы‑легенда с иконкой «?» */}
         <div className="flex flex-wrap gap-2 mb-3">
           {chips.map((c) => (
-            <span
-              key={c.label}
-              className={`text-xs inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border ${c.tone}`}
-            >
+            <span key={c.label} className={`text-xs inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white border ${c.tone}`}>
               {c.label}
               <InfoHint title={c.hintTitle} text={c.hintText} />
             </span>
           ))}
         </div>
-        {/* Скелетоны (визуал «как раньше») */}
-        <div className="grid gap-2 opacity-85">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <div key={n} className="flex items-center justify-between p-2 rounded-lg border">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-rose-500" />
-                <div className="h-3 w-40 bg-slate-100 rounded" />
+
+        {/* 5 информативных пунктов превью */}
+        <div role="list" aria-label="Ключевые пункты отчёта" className="grid gap-2">
+          {previewRows.map((row) => (
+            <div key={row.k} role="listitem" className="flex items-start justify-between gap-3 p-3 rounded-lg border bg-white">
+              <div className="flex items-start gap-2">
+                <div className="mt-1 h-2.5 w-2.5 rounded-full bg-rose-500" />
+                <div>
+                  <div className="font-medium">{row.left}</div>
+                  <div className="text-xs text-slate-600">{row.sub}</div>
+                </div>
               </div>
-              <div className="h-3 w-16 bg-slate-100 rounded" />
+              <div className="text-xs md:text-sm text-slate-700 whitespace-nowrap">{row.right}</div>
             </div>
           ))}
         </div>
+
         <div className="mt-3 text-xs text-slate-500">
           Демо‑данные. Финальный отчёт доступен после регистрации и запуска полного аудита.
         </div>
       </div>
     </div>
+  );
+}
+
+function FAQBar() {
+  const items = [
+    { q: "Это безопасно?", a: "Да. Данные шифруются (AES‑256), отчёты скачиваются по presigned‑URL с ограничением по времени." },
+    { q: "Повлияет на SEO?", a: "Нет. Мы читаем ваш сайт как обычный пользователь/бот, без записи и без нагрузки на индексацию." },
+    { q: "Сколько времени?", a: "Первые результаты за ~30 секунд. Полный аудит до 5 минут для сайтов до 100 страниц." },
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-700">
+      {items.map((i) => (
+        <span key={i.q} className="inline-flex items-center gap-2">
+          <span className="font-medium">{i.q}</span>
+          <InfoHint title={i.q} text={i.a} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function StepBanner({ onSignup, onSignin }: { onSignup: () => void; onSignin: () => void }) {
+  return (
+    <Card className="rounded-2xl border-blue-100">
+      <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="text-sm leading-relaxed flex items-center gap-3">
+          <span className="inline-flex items-center whitespace-nowrap px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-medium">
+            Шаг 1 из 2
+          </span>
+          <span>
+            Предпросмотр готов. Чтобы получить <b>полный отчёт</b> и экспорт — авторизуйтесь.
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer" onClick={onSignup}>Зарегистрироваться</Button>
+          <Button variant="ghost" className="cursor-pointer" onClick={onSignin}>Войти</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function HeroHeadline({ variant }: { variant: HeroVariant }) {
+  if (variant === "B") {
+    return (
+      <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
+        Проверка сайта за 30 секунд. Балл <span className="text-blue-700">0–100</span> и топ‑3 проблем — <span className="text-rose-600">без установки</span>
+      </h1>
+    );
+  }
+  return (
+    <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
+      {BRAND.name}: мгновенная оценка <span className="text-blue-700">0–100</span> и топ‑3 проблем — <span className="text-rose-600">бесплатно</span>
+    </h1>
   );
 }
 
@@ -297,6 +321,7 @@ export default function LeadMagnetScreen() {
   const [simulateApiError, setSimulateApiError] = useState(false);
   const [simulateAntiBot, setSimulateAntiBot] = useState(false);
   const [plan, setPlan] = useState<"Free" | "Pro" | "Agency">("Free");
+  const [heroVariant, setHeroVariant] = useState<HeroVariant>("A");
 
   // Модальные окна
   const [signinOpen, setSigninOpen] = useState(false);
@@ -312,6 +337,10 @@ export default function LeadMagnetScreen() {
     console.assert(validateUrl("https://example.com"), "validateUrl должен принимать https://example.com");
     // Невалидный ввод
     console.assert(!validateUrl("not_a_url"), "validateUrl должен отклонять невалидные строки");
+    // ДОП. ТЕСТЫ
+    console.assert(normalizeUrl("ya.ru").startsWith("https://"), "normalizeUrl должен подставлять https:// для коротких доменов");
+    console.assert(validateUrl("http://ya.ru"), "validateUrl должен принимать http:// схемы");
+    console.assert(!validateUrl(""), "validateUrl должен отклонять пустую строку");
   }, []);
 
   const onSubmit = async () => {
@@ -384,9 +413,7 @@ export default function LeadMagnetScreen() {
         <section className="grid gap-8 md:grid-cols-12 items-start">
           <div className="md:col-span-7 space-y-5">
             <Eyebrow />
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight">
-              {BRAND.name}: мгновенная оценка <span className="text-blue-700">0–100</span> и топ‑3 проблем — <span className="text-rose-600">бесплатно</span>
-            </h1>
+            <HeroHeadline variant={heroVariant} />
             <p className="text-slate-600">Вставьте адрес сайта. Проверка занимает ~30 секунд. Лимиты: 30 req/min/IP.</p>
 
             <Card className="rounded-2xl shadow-lg border-blue-100/60">
@@ -439,6 +466,7 @@ export default function LeadMagnetScreen() {
                   <Badge variant="outline" className="border-slate-400 text-slate-700">Free‑лимит: 1/день, 3/мес, ≤100 страниц</Badge>
                 </div>
 
+                <FAQBar />
               </CardContent>
             </Card>
 
@@ -448,19 +476,21 @@ export default function LeadMagnetScreen() {
           <aside className="md:col-span-5 space-y-4">
             <ReportPreview />
             {(score !== null) && (
-              <Card className="rounded-2xl shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-base">Результат проверки</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Score value={score!} />
-                  <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer" asChild>
-                    <a href="/signup">Сделать полный аудит</a>
-                  </Button>
-                  <div className="text-xs text-slate-600">Полный отчёт содержит детальный список проблем и рекомендации.
-                  </div>
-                </CardContent>
-              </Card>
+              <>
+                <StepBanner onSignup={() => setSignupOpen(true)} onSignin={() => setSigninOpen(true)} />
+                <Card className="rounded-2xl shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-base">Результат проверки</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Score value={score!} />
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer" asChild>
+                      <a href="/signup">Сделать полный аудит</a>
+                    </Button>
+                    <div className="text-xs text-slate-600">Полный отчёт содержит детальный список проблем и рекомендации.</div>
+                  </CardContent>
+                </Card>
+              </>
             )}
           </aside>
         </section>
@@ -525,7 +555,15 @@ export default function LeadMagnetScreen() {
                   <SelectItem value="Agency">Agency</SelectItem>
                 </SelectContent>
               </Select>
-              <div className="text-xs text-slate-500 mt-2">На главной тариф влияет подсказки и CTA. Экспорт доступен после регистрации.</div>
+              <div className="mt-4 text-sm font-medium mb-2">Hero‑вариант</div>
+              <Select value={heroVariant} onValueChange={(v: any) => setHeroVariant(v)}>
+                <SelectTrigger className="w-full cursor-pointer"><SelectValue placeholder="Вариант" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">A — «мгновенная оценка 0–100…»</SelectItem>
+                  <SelectItem value="B">B — «Проверка за 30 секунд…»</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="text-xs text-slate-500 mt-2">Переключайте A/B‑варианты заголовка для экспериментов.</div>
             </PopoverContent>
           </Popover>
         </div>
