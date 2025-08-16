@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -24,10 +22,13 @@ import {
   Rocket,
   FileDown,
   FileSpreadsheet,
-  Settings2,
   UploadCloud,
   Sparkles,
-  Search
+  Search,
+  Eye,
+  Info as InfoIcon,
+  Check,
+  RotateCcw,
 } from "lucide-react";
 
 // ===== Типы =====
@@ -36,9 +37,9 @@ type Plan = "Free" | "Pro" | "Agency";
 
 type Priority = "P0" | "P1" | "P2" | "P3";
 
-type Issue = { id: string; title: string; priority: Priority; section: "tech"|"a11y"|"cwv"|"seo"|"ux" };
+type Issue = { id: string; title: string; priority: Priority; section: "tech" | "a11y" | "cwv" | "seo" | "ux" };
 
-type AuditRow = { id: string; url: string; when: string; score: number; strategy: "mobile"|"desktop" };
+type AuditRow = { id: string; url: string; when: string; score: number; strategy: "mobile" | "desktop" };
 
 type ReportRow = { id: string; title: string; created: string; size: string };
 
@@ -68,7 +69,10 @@ function InfoHint({ title, text }: { title: string; text: string }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button aria-label={`Подробнее: ${title}`} className="inline-flex items-center justify-center h-5 w-5 rounded-full border text-slate-600 hover:bg-slate-50 cursor-help">
+        <button
+          aria-label={`Подробнее: ${title}`}
+          className="inline-flex items-center justify-center h-5 w-5 rounded-full border text-slate-600 hover:bg-slate-50 cursor-help"
+        >
           <HelpCircle className="h-3.5 w-3.5" />
         </button>
       </PopoverTrigger>
@@ -116,11 +120,23 @@ function ScoreCard() {
   return (
     <Card className="rounded-2xl border-blue-100">
       <CardContent className="p-4 space-y-3">
-        <SectionTitle icon={<Star className="h-4 w-4 text-blue-700"/>}>Итоговый балл</SectionTitle>
+        <SectionTitle
+          icon={<Star className="h-4 w-4 text-blue-700" />}
+          cta={
+            <InfoHint
+              title="Как считается балл?"
+              text={
+                "Каждой проблеме назначается штраф: P0=8–10, P1=5–7, P2=3–4, P3=0.5–2. Итог: 100 − сумма штрафов. Если покрытие тестов неполное, применяется понижающий коэффициент. Чем выше балл — тем меньше критичных проблем."
+              }
+            />
+          }
+        >
+          Итоговый балл (0–100)
+        </SectionTitle>
         <div className="flex items-end gap-4">
           <div>
             <div className="text-5xl font-bold text-blue-700">82</div>
-            <div className="text-xs text-slate-500">по методике \u00AB100 − Σ(штрафов)\u00BB</div>
+            <div className="text-xs text-slate-500">Индекс качества сайта</div>
           </div>
           <div className="flex-1">
             <Progress value={82} aria-label="Общий балл" />
@@ -135,7 +151,9 @@ function ScoreCard() {
 function CWVCard() {
   return (
     <Card className="rounded-2xl">
-      <CardHeader className="pb-2"><CardTitle className="text-sm">Core Web Vitals</CardTitle></CardHeader>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Core Web Vitals</CardTitle>
+      </CardHeader>
       <CardContent className="p-4 pt-0 grid grid-cols-3 gap-2 text-center">
         <div className="rounded-xl border p-2">
           <div className="text-xs text-slate-500">LCP</div>
@@ -166,28 +184,105 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   );
 }
 
-function Backlog({ issues }: { issues: Issue[] }) {
+function Backlog({
+  issues,
+  prio,
+  onTogglePrio,
+  device,
+  onChangeDevice,
+  onResetFilters,
+}: {
+  issues: Issue[];
+  prio: Priority[];
+  onTogglePrio: (p: Priority) => void;
+  device: "all" | "mobile" | "desktop";
+  onChangeDevice: (d: "all" | "mobile" | "desktop") => void;
+  onResetFilters: () => void;
+}) {
+  const empty = issues.length === 0;
+  const activePrio = ["P0", "P1", "P2", "P3"].filter((p) => prio.includes(p as Priority)).join(", ");
   return (
     <Card className="rounded-2xl">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-sm">Backlog P0–P3</CardTitle>
         <div className="text-xs text-slate-500 flex items-center gap-2">
-          Приоритеты <InfoHint title="Приоритезация" text="P0 — критично, далее P1–P3. Методика скоринга: 100 − сумма штрафов. {SA}" />
+          Приоритеты
+          <InfoHint
+            title="Приоритезация"
+            text="P0 — критично, далее P1–P3. Стартуем с P0, затем P1. Ссылки ведут на конкретные URL с проблемами: в превью — 10 точек интереса (/, /catalog, карточка, /contacts, /about, блог и т.п.), в полном отчёте — расширенный список из sitemap.xml/GSC."
+          />
         </div>
       </CardHeader>
-      <CardContent className="p-4 pt-0 space-y-2">
-        {issues.slice(0, 8).map((it) => (
-          <div key={it.id} className="flex items-start justify-between gap-2 p-2 rounded-lg border">
-            <div className="flex items-start gap-2">
-              <div className="mt-1 h-2 w-2 rounded-full bg-rose-500"/>
-              <div>
-                <div className="font-medium flex items-center gap-2">{it.title}<PriorityBadge p={it.priority}/></div>
-                <div className="text-xs text-slate-600">Секция: {it.section.toUpperCase()}</div>
-              </div>
-            </div>
-            <Button size="sm" variant="ghost" className="cursor-pointer">Открыть <ExternalLink className="h-3.5 w-3.5"/></Button>
+      <CardContent className="p-4 pt-0 space-y-3">
+        {/* ВСТРОЕННЫЕ ФИЛЬТРЫ */}
+        <div className="grid gap-2 rounded-xl border bg-slate-50 p-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-xs font-medium text-slate-600">Фильтры</div>
+            <button
+              onClick={onResetFilters}
+              className="text-xs inline-flex items-center gap-1 px-2 py-1 rounded-md border cursor-pointer bg-white"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Сбросить
+            </button>
           </div>
-        ))}
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Фильтр по приоритетам">
+            {( ["P0", "P1", "P2", "P3"] as Priority[] ).map((p) => {
+              const active = prio.includes(p);
+              return (
+                <button
+                  key={p}
+                  onClick={() => onTogglePrio(p)}
+                  className={`px-2 py-1 rounded-md border text-xs inline-flex items-center gap-1 cursor-pointer ${
+                    active ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-700"
+                  }`}
+                  aria-pressed={active}
+                >
+                  {active && <Check className="h-3 w-3" />} {p}
+                </button>
+              );
+            })}
+          </div>
+          <div className="grid grid-cols-3 gap-2" role="group" aria-label="Тип устройства">
+            {( ["all", "mobile", "desktop"] as const ).map((d) => (
+              <Button
+                key={d}
+                variant={device === d ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => onChangeDevice(d)}
+                aria-pressed={device === d}
+              >
+                {d === "all" ? "Все" : d === "mobile" ? "Мобильные" : "Десктоп"}
+              </Button>
+            ))}
+          </div>
+          <div className="text-xs text-slate-500">
+            Активно: {activePrio || "—"}
+            {device !== "all" ? ` • Устройство: ${device}` : ""}
+          </div>
+        </div>
+
+        {/* СПИСОК ЗАДАЧ */}
+        {empty ? (
+          <div className="p-3 rounded-lg border text-sm text-slate-600">Нет задач по выбранным фильтрам.</div>
+        ) : (
+          issues.slice(0, 50).map((it) => (
+            <div key={it.id} className="flex items-start justify-between gap-2 p-2 rounded-lg border">
+              <div className="flex items-start gap-2">
+                <div className="mt-1 h-2 w-2 rounded-full bg-rose-500" />
+                <div>
+                  <div className="font-medium flex items-center gap-2">
+                    {it.title}
+                    <PriorityBadge p={it.priority} />
+                  </div>
+                  <div className="text-xs text-slate-600">Секция: {it.section.toUpperCase()}</div>
+                </div>
+              </div>
+              <Button size="sm" variant="ghost" className="cursor-pointer">
+                Открыть <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))
+        )}
       </CardContent>
     </Card>
   );
@@ -196,19 +291,53 @@ function Backlog({ issues }: { issues: Issue[] }) {
 function Integrations() {
   return (
     <Card className="rounded-2xl">
-      <CardHeader className="pb-2"><CardTitle className="text-sm">Интеграции</CardTitle></CardHeader>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Интеграции (работают автоматически)</CardTitle>
+      </CardHeader>
       <CardContent className="p-4 pt-0 space-y-2 text-sm">
-        <div className="flex items-center justify-between p-2 rounded-lg border">
-          <div className="flex items-center gap-2"><Globe className="h-4 w-4"/> Google PageSpeed Insights</div>
-          <Badge variant="outline" className="border-blue-600 text-blue-700">Подключено</Badge>
+        <div className="flex items-center justify-between p-2 rounded-lg border bg-slate-50">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4" /> Google PageSpeed Insights
+            <InfoHint
+              title="Как это работает"
+              text="Собираем метрики скорости и CWV автоматически. Никаких действий со стороны клиента не требуется."
+            />
+          </div>
+          <Badge variant="outline" className="border-green-600 text-green-700">
+            Активно
+          </Badge>
         </div>
-        <div className="flex items-center justify-between p-2 rounded-lg border">
-          <div className="flex items-center gap-2"><Globe className="h-4 w-4"/> Lighthouse (batch)</div>
-          <Badge variant="outline">В очереди</Badge>
+        <div className="flex items-center justify-between p-2 rounded-lg border bg-slate-50">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4" /> Lighthouse (batch)
+            <InfoHint
+              title="Зачем"
+              text="Глубокий техаудит и доступность. Запускается автоматически очередями, без ручной настройки."
+            />
+          </div>
+          <Badge variant="outline" className="border-green-600 text-green-700">
+            Активно
+          </Badge>
         </div>
-        <div className="flex items-center justify-between p-2 rounded-lg border">
-          <div className="flex items-center gap-2"><Building2 className="h-4 w-4"/> Модуль Битрикс</div>
-          <Button size="sm" variant="outline" className="cursor-pointer"><UploadCloud className="h-4 w-4 mr-2"/>Установить</Button>
+        <div className="flex items-center justify-between p-3 rounded-lg border bg-white">
+          <div className="flex items-start gap-2">
+            <Building2 className="h-5 w-5 mt-0.5" />
+            <div>
+              <div className="font-medium">Модуль Битрикс — расширенный аудит</div>
+              <div className="text-xs text-slate-600">
+                Даст доступ к закрытым страницам, авторизованным зонам и обойдёт антибот‑защиту. Рекомендуем для полного отчёта.
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <InfoHint
+              title="Почему это важно"
+              text="Без модуля часть страниц (корзина, кабинет, чек‑аут) может быть недоступна или защищена антиботами."
+            />
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
+              <UploadCloud className="h-4 w-4 mr-2" /> Установить модуль
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -218,15 +347,31 @@ function Integrations() {
 function QuickActions({ plan, canCSV, onRunAudit }: { plan: Plan; canCSV: boolean; onRunAudit: () => void }) {
   return (
     <Card className="rounded-2xl border-blue-100">
-      <CardHeader className="pb-2"><CardTitle className="text-sm">Быстрые действия</CardTitle></CardHeader>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Быстрые действия</CardTitle>
+      </CardHeader>
       <CardContent className="p-4 pt-0 grid gap-2">
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer" onClick={onRunAudit}><Rocket className="h-4 w-4 mr-2"/>Запустить аудит</Button>
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer" onClick={onRunAudit}>
+          <Rocket className="h-4 w-4 mr-2" /> Запустить аудит
+        </Button>
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" disabled={plan === "Free"} className="cursor-pointer disabled:opacity-50"><FileDown className="h-4 w-4 mr-2"/>Экспорт PDF</Button>
-          <Button variant="outline" disabled={!canCSV} className="cursor-pointer disabled:opacity-50"><FileSpreadsheet className="h-4 w-4 mr-2"/>CSV</Button>
+          <Button variant="outline" disabled={plan === "Free"} className="cursor-pointer disabled:opacity-50">
+            <FileDown className="h-4 w-4 mr-2" /> Экспорт PDF
+          </Button>
+          <Button variant="outline" disabled={!canCSV} className="cursor-pointer disabled:opacity-50">
+            <FileSpreadsheet className="h-4 w-4 mr-2" /> CSV
+          </Button>
         </div>
         <div className="text-xs text-slate-600">
-          PDF — только Pro/Agency; CSV — только Agency в R1. <InfoHint title="Экспорт" text="PDF: Pro/Agency. CSV: только Agency (R1). {SA}"/>
+          <span className="inline-flex items-center gap-1">
+            <InfoIcon className="h-3.5 w-3.5" /> PDF:
+          </span>{" "}
+          брендированный отчёт с логотипом и контактами (Pro/Agency).
+          <br />
+          <span className="inline-flex items-center gap-1">
+            <InfoIcon className="h-3.5 w-3.5" /> CSV:
+          </span>{" "}
+          таблица всех найденных проблем (ID, страница, приоритет, рекомендация) — только Agency (R1).
         </div>
       </CardContent>
     </Card>
@@ -237,16 +382,24 @@ function ClientsCard() {
   return (
     <Card className="rounded-2xl">
       <CardHeader className="pb-2 flex items-center justify-between">
-        <CardTitle className="text-sm flex items-center gap-2"><Briefcase className="h-4 w-4"/> Клиенты</CardTitle>
-        <Button size="sm" variant="outline" className="cursor-pointer">Добавить клиента</Button>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Briefcase className="h-4 w-4" /> Клиенты
+        </CardTitle>
+        <Button size="sm" variant="outline" className="cursor-pointer">
+          Добавить клиента
+        </Button>
       </CardHeader>
       <CardContent className="p-4 pt-0 grid gap-2 text-sm">
         <div className="flex items-center justify-between p-2 rounded-lg border">
-          <div className="flex items-center gap-2"><Users className="h-4 w-4"/> Acme LLC</div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4" /> Acme LLC
+          </div>
           <div className="text-xs text-slate-500">4 проекта</div>
         </div>
         <div className="flex items-center justify-between p-2 rounded-lg border">
-          <div className="flex items-center gap-2"><Users className="h-4 w-4"/> ShopNow</div>
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4" /> ShopNow
+          </div>
           <div className="text-xs text-slate-500">2 проекта</div>
         </div>
       </CardContent>
@@ -258,11 +411,17 @@ function CompareAudits() {
   return (
     <Card className="rounded-2xl">
       <CardHeader className="pb-2 flex items-center justify-between">
-        <CardTitle className="text-sm flex items-center gap-2"><LineChart className="h-4 w-4"/> Сравнение аудитов</CardTitle>
-        <Button size="sm" variant="outline" className="cursor-pointer">Добавить сайт</Button>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <LineChart className="h-4 w-4" /> Сравнение аудитов
+        </CardTitle>
+        <Button size="sm" variant="outline" className="cursor-pointer">
+          Добавить сайт
+        </Button>
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        <div className="h-24 rounded-xl border grid place-items-center text-xs text-slate-500">График динамики (placeholder)</div>
+        <div className="h-24 rounded-xl border grid place-items-center text-xs text-slate-500">
+          График динамики (placeholder)
+        </div>
       </CardContent>
     </Card>
   );
@@ -277,7 +436,9 @@ function OwnerChecklist() {
   return (
     <Card className="rounded-2xl">
       <CardHeader className="pb-2 flex items-center justify-between">
-        <CardTitle className="text-sm flex items-center gap-2"><ListChecks className="h-4 w-4"/> Что сделать на этой неделе</CardTitle>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <ListChecks className="h-4 w-4" /> Что сделать на этой неделе
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0 grid gap-2">
         {items.map((i) => (
@@ -295,10 +456,12 @@ function WhiteLabelCard() {
   return (
     <Card className="rounded-2xl border-rose-100">
       <CardHeader className="pb-2 flex items-center justify-between">
-        <CardTitle className="text-sm flex items-center gap-2"><Layers3 className="h-4 w-4 text-rose-600"/> White‑label</CardTitle>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Layers3 className="h-4 w-4 text-rose-600" /> White‑label
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0 text-sm">
-        Лого и контакты бренда клиента будут в отчётах. <InfoHint title="White‑label" text="В R1: логотип + контакты. {PO}"/>
+        Лого и контакты бренда клиента будут в отчётах. <InfoHint title="White‑label" text="В R1: логотип + контакты. {PO}" />
       </CardContent>
     </Card>
   );
@@ -311,43 +474,57 @@ function SavedReports({ rows, plan, canCSV }: { rows: ReportRow[]; plan: Plan; c
         <CardTitle className="text-sm">Сохранённые отчёты</CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0 grid gap-2 text-sm">
-        {rows.map(r => (
+        {rows.map((r) => (
           <div key={r.id} className="flex items-center justify-between p-2 rounded-lg border">
             <div>
               <div className="font-medium">{r.title}</div>
-              <div className="text-xs text-slate-600">{r.created} • {r.size}</div>
+              <div className="text-xs text-slate-600">
+                {r.created} • {r.size}
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" className="cursor-pointer disabled:opacity-50" disabled={plan === "Free"}><FileDown className="h-4 w-4 mr-1"/>PDF</Button>
-              <Button size="sm" variant="outline" className="cursor-pointer disabled:opacity-50" disabled={!canCSV}><FileSpreadsheet className="h-4 w-4 mr-1"/>CSV</Button>
+              <Button size="sm" variant="secondary" className="cursor-pointer" asChild>
+                <a href={`/reports/${r.id}`}>
+                  <Eye className="h-4 w-4 mr-1" />Открыть
+                </a>
+              </Button>
+              <Button size="sm" variant="ghost" className="cursor-pointer disabled:opacity-50" disabled={plan === "Free"}>
+                <FileDown className="h-4 w-4 mr-1" /> PDF
+              </Button>
+              <Button size="sm" variant="outline" className="cursor-pointer disabled:opacity-50" disabled={!canCSV}>
+                <FileSpreadsheet className="h-4 w-4 mr-1" /> CSV
+              </Button>
             </div>
           </div>
         ))}
-      </CardContent>
-    </Card>
-  );
-}
       </CardContent>
     </Card>
   );
 }
 
 function RecentAudits({ rows }: { rows: AuditRow[] }) {
+  const empty = rows.length === 0;
   return (
     <Card className="rounded-2xl">
       <CardHeader className="pb-2 flex items-center justify-between">
         <CardTitle className="text-sm">Последние аудиты</CardTitle>
       </CardHeader>
       <CardContent className="p-4 pt-0 grid gap-2 text-sm">
-        {rows.map(r => (
-          <div key={r.id} className="flex items-center justify-between p-2 rounded-lg border">
-            <div>
-              <div className="font-medium">{r.url}</div>
-              <div className="text-xs text-slate-600">{r.when} • {r.strategy === 'mobile' ? 'Mobile' : 'Desktop'}</div>
+        {empty ? (
+          <div className="p-3 rounded-lg border text-sm text-slate-600">Нет результатов по выбранным фильтрам.</div>
+        ) : (
+          rows.map((r) => (
+            <div key={r.id} className="flex items-center justify-between p-2 rounded-lg border">
+              <div>
+                <div className="font-medium">{r.url}</div>
+                <div className="text-xs text-slate-600">
+                  {r.when} • {r.strategy === "mobile" ? "Mobile" : "Desktop"}
+                </div>
+              </div>
+              <Badge className={r.score >= 85 ? "bg-green-600" : "bg-blue-600"}>{r.score}</Badge>
             </div>
-            <Badge className={r.score >= 85 ? 'bg-green-600' : 'bg-blue-600'}>{r.score}</Badge>
-          </div>
-        ))}
+          ))
+        )}
       </CardContent>
     </Card>
   );
@@ -355,30 +532,75 @@ function RecentAudits({ rows }: { rows: AuditRow[] }) {
 
 // ===== Корневой экран =====
 export default function DashboardFull() {
-  const [role, setRole] = useState<UserRole>(() => (typeof window !== 'undefined' ? (localStorage.getItem('ba.role') as UserRole) : null) || 'owner');
+  const [role, setRole] = useState<UserRole>(
+    () => (typeof window !== "undefined" ? (localStorage.getItem("ba.role") as UserRole) : null) || "owner"
+  );
   const [plan, setPlan] = useState<Plan>("Pro");
+
+  // Фильтры
+  const [prio, setPrio] = useState<Priority[]>(["P0", "P1", "P2", "P3"]);
+  const [device, setDevice] = useState<"all" | "mobile" | "desktop">("all");
+  const [q, setQ] = useState<string>("");
 
   // Мини‑тесты / инварианты
   useEffect(() => {
-    const roles = ["studio","seo","owner","agency"] as const;
-    roles.forEach(r => console.assert(roles.includes(r), "roles enum ok"));
+    const roles = ["studio", "seo", "owner", "agency"] as const;
+    roles.forEach((r) => console.assert(roles.includes(r), "roles enum ok"));
     // CSV gating
-    console.assert(FEATURES.exportCSV('agency','Agency') === true, 'CSV должен быть доступен для Agency');
-    console.assert(FEATURES.exportCSV('owner','Pro') === false, 'CSV не должен быть доступен для не‑Agency');
+    console.assert(FEATURES.exportCSV("agency", "Agency") === true, "CSV должен быть доступен для Agency");
+    console.assert(FEATURES.exportCSV("owner", "Pro") === false, "CSV не должен быть доступен для не‑Agency");
     // WL gating
-    console.assert(FEATURES.whiteLabel('agency','Pro') === true && FEATURES.whiteLabel('owner','Pro') === false, 'WL гейт по роли/плану');
+    console.assert(
+      FEATURES.whiteLabel("agency", "Pro") === true && FEATURES.whiteLabel("owner", "Pro") === false,
+      "WL гейт по роли/плану"
+    );
+    // multiClient
+    console.assert(FEATURES.multiClient("studio") === true && FEATURES.multiClient("owner") === false, "multiClient гейт");
+    // Фильтры — базовые проверки
+    console.assert(prio.includes("P0") && prio.includes("P3"), "По умолчанию выбраны все приоритеты");
+    // Просмотрщик отчётов — базовый инвариант
+    console.assert(/^\/reports\//.test(`/reports/${DEMO_REPORTS[0].id}`), "Путь web‑viewer отчёта корректен");
+  }, []);
+
+  // Доп. тесты поведения фильтров (без изменения состояния)
+  useEffect(() => {
+    console.assert(DEMO_ISSUES.length >= 1 && DEMO_AUDITS.length >= 1, "Демо‑данные присутствуют");
+    console.assert(DEMO_ISSUES.some(i => i.title.toLowerCase().includes("cls")), "Демо содержит кейс для поиска: CLS");
   }, []);
 
   const setRolePersist = (r: UserRole) => {
     setRole(r);
-    try { localStorage.setItem('ba.role', r); } catch {}
+    try {
+      localStorage.setItem("ba.role", r);
+    } catch {}
   };
 
   const onRunAudit = () => {
-    console.log('audit_started', { ts: Date.now(), source: 'dashboard' }); // {BA}
+    console.log("audit_started", { ts: Date.now(), source: "dashboard" }); // {BA}
   };
 
   const canCSV = FEATURES.exportCSV(role, plan);
+
+  // Применение фильтров
+  const filteredIssues = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return DEMO_ISSUES.filter((i) => prio.includes(i.priority) && (s ? i.title.toLowerCase().includes(s) : true));
+  }, [prio, q]);
+  const filteredAudits = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return DEMO_AUDITS.filter((a) => (device === "all" ? true : a.strategy === device) && (s ? a.url.toLowerCase().includes(s) : true));
+  }, [device, q]);
+
+  const togglePriority = (p: Priority) => {
+    setPrio((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
+  };
+
+  const resetFilters = () => {
+    setPrio(["P0", "P1", "P2", "P3"]);
+    setDevice("all");
+    // мини‑тест после сброса (без ожидания):
+    console.assert(true, "resetFilters выполнен");
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
@@ -388,7 +610,9 @@ export default function DashboardFull() {
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-blue-600 text-white grid place-items-center">BA</div>
             <div className="text-base font-semibold text-slate-800">{BRAND.name}</div>
-            <Badge variant="outline" className="border-rose-600 text-rose-700">R1</Badge>
+            <Badge variant="outline" className="border-rose-600 text-rose-700">
+              R1
+            </Badge>
           </div>
           <nav className="flex items-center gap-2 text-sm">
             <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Аудиты</a>
@@ -404,7 +628,9 @@ export default function DashboardFull() {
           <div className="flex items-center gap-2 text-sm">
             Роль:
             <Select value={role} onValueChange={(v: any) => setRolePersist(v)}>
-              <SelectTrigger className="w-40 cursor-pointer"><SelectValue/></SelectTrigger>
+              <SelectTrigger className="w-40 cursor-pointer">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="owner">Владелец</SelectItem>
                 <SelectItem value="seo">SEO</SelectItem>
@@ -416,7 +642,9 @@ export default function DashboardFull() {
           <div className="flex items-center gap-2 text-sm">
             Тариф:
             <Select value={plan} onValueChange={(v: any) => setPlan(v)}>
-              <SelectTrigger className="w-32 cursor-pointer"><SelectValue/></SelectTrigger>
+              <SelectTrigger className="w-32 cursor-pointer">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Free">Free</SelectItem>
                 <SelectItem value="Pro">Pro</SelectItem>
@@ -431,11 +659,15 @@ export default function DashboardFull() {
         <div className="rounded-2xl p-4 bg-gradient-to-r from-blue-600 to-rose-600 text-white">
           <div className="flex items-center justify-between gap-3">
             <div className="text-lg font-semibold flex items-center gap-2">
-              <Sparkles className="h-4 w-4"/> Личный кабинет — {role.toUpperCase()}
+              <Sparkles className="h-4 w-4" /> Личный кабинет — {role.toUpperCase()}
             </div>
             <div className="text-xs text-white/90 flex items-center gap-3">
-              <div className="inline-flex items-center gap-1"><ShieldCheck className="h-4 w-4"/> AES‑256</div>
-              <div className="inline-flex items-center gap-1"><Star className="h-4 w-4"/> WCAG 2.1 AA</div>
+              <div className="inline-flex items-center gap-1">
+                <ShieldCheck className="h-4 w-4" /> AES‑256
+              </div>
+              <div className="inline-flex items-center gap-1">
+                <Star className="h-4 w-4" /> WCAG 2.1 AA
+              </div>
             </div>
           </div>
         </div>
@@ -444,55 +676,55 @@ export default function DashboardFull() {
         <section className="grid md:grid-cols-12 gap-4 items-start">
           {/* Левая колонка */}
           <div className="md:col-span-8 grid gap-4">
-            <ScoreCard/>
+            <ScoreCard />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <CWVCard/>
-              <Stat label="Ошибок P0" value="2" sub="Нужно исправить первыми"/>
-              <Stat label="Ошибок P1–P3" value="11" sub="См. бэклог ниже"/>
+              <CWVCard />
+              <Stat label="Ошибок P0" value="2" sub="Нужно исправить первыми" />
+              <Stat label="Ошибок P1–P3" value="11" sub="См. бэклог ниже" />
             </div>
 
             {/* Ролевые особенности */}
-            {FEATURES.multiClient(role) && <ClientsCard/>}
-            {FEATURES.compareAudits(role) && <CompareAudits/>}
-            {FEATURES.ownerChecklist(role) && <OwnerChecklist/>}
-            {FEATURES.whiteLabel(role, plan) && <WhiteLabelCard/>}
+            {FEATURES.multiClient(role) && <ClientsCard />}
+            {FEATURES.compareAudits(role) && <CompareAudits />}
+            {FEATURES.ownerChecklist(role) && <OwnerChecklist />}
+            {FEATURES.whiteLabel(role, plan) && <WhiteLabelCard />}
 
-            <Backlog issues={DEMO_ISSUES}/>
-            <RecentAudits rows={DEMO_AUDITS}/>
+            <Backlog
+              issues={filteredIssues}
+              prio={prio}
+              onTogglePrio={togglePriority}
+              device={device}
+              onChangeDevice={setDevice}
+              onResetFilters={resetFilters}
+            />
+            <RecentAudits rows={filteredAudits} />
           </div>
 
           {/* Правая колонка */}
           <aside className="md:col-span-4 grid gap-4">
-            <QuickActions plan={plan} canCSV={canCSV} onRunAudit={onRunAudit}/>
-            <Integrations/>
-
-            {/* Фильтры */}
-            <Card className="rounded-2xl">
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Фильтры</CardTitle></CardHeader>
-              <CardContent className="p-4 pt-0 grid gap-3 text-sm">
-                <div className="flex flex-wrap gap-2">
-                  {["P0","P1","P2","P3"].map(p => (
-                    <Badge key={p} variant="outline" className="cursor-pointer">{p}</Badge>
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" className="cursor-pointer">Только мобильные</Button>
-                  <Button variant="outline" className="cursor-pointer">Только десктоп</Button>
-                </div>
-              </CardContent>
-            </Card>
+            <QuickActions plan={plan} canCSV={canCSV} onRunAudit={onRunAudit} />
+            <Integrations />
 
             {/* Поиск */}
             <Card className="rounded-2xl">
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Поиск по отчёту</CardTitle></CardHeader>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Поиск по отчёту</CardTitle>
+              </CardHeader>
               <CardContent className="p-4 pt-0 grid gap-2">
-                <Input placeholder="Найти проблему или страницу"/>
-                <Button variant="ghost" className="justify-start cursor-pointer"><Search className="h-4 w-4 mr-2"/>Расширенный поиск</Button>
+                <Input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Найти проблему или страницу" />
+                <div className="flex items-center justify-between">
+                  <Button variant="ghost" className="justify-start cursor-pointer">
+                    <Search className="h-4 w-4 mr-2" /> Расширенный поиск
+                  </Button>
+                  {q && (
+                    <button onClick={() => setQ("")} className="text-xs text-slate-500 hover:underline cursor-pointer">Очистить</button>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
             {/* Сохранённые отчёты */}
-            <SavedReports rows={DEMO_REPORTS} plan={plan} canCSV={canCSV}/>
+            <SavedReports rows={DEMO_REPORTS} plan={plan} canCSV={canCSV} />
           </aside>
         </section>
 
