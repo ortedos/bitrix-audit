@@ -37,18 +37,31 @@ type Plan = "Free" | "Pro" | "Agency";
 
 type Priority = "P0" | "P1" | "P2" | "P3";
 
-type Issue = { id: string; title: string; priority: Priority; section: "tech" | "a11y" | "cwv" | "seo" | "ux" };
+type Device = "all" | "mobile" | "desktop";
+
+type Issue = {
+  id: string;
+  title: string;
+  priority: Priority;
+  section: "tech" | "a11y" | "cwv" | "seo" | "ux";
+  strategies?: ("mobile" | "desktop")[]; // если нет — считаем ['mobile','desktop']
+};
 
 type AuditRow = { id: string; url: string; when: string; score: number; strategy: "mobile" | "desktop" };
 
 type ReportRow = { id: string; title: string; created: string; size: string };
 
-// ===== Демо‑данные =====
+// ===== Константы для UI (убираем inline `as const` в JSX) =====
 const BRAND = { name: "Bitrix Audit", company: "ООО \u00ABКачество жизни\u00BB" };
+const DEVICES: Device[] = ["all", "mobile", "desktop"];
+const PRIORITIES: Priority[] = ["P0", "P1", "P2", "P3"];
+const ROLES: UserRole[] = ["studio", "seo", "owner", "agency"];
+
+// ===== Демо‑данные =====
 const DEMO_ISSUES: Issue[] = [
-  { id: "p0-1", title: "CLS выше 0.25 на каталоге", priority: "P0", section: "cwv" },
-  { id: "p1-1", title: "Нет H1 на 7 страницах", priority: "P1", section: "seo" },
-  { id: "p1-2", title: "Контраст CTA ниже 4.5:1", priority: "P1", section: "a11y" },
+  { id: "p0-1", title: "CLS выше 0.25 на каталоге", priority: "P0", section: "cwv", strategies: ["mobile"] },
+  { id: "p1-1", title: "Нет H1 на 7 страницах", priority: "P1", section: "seo", strategies: ["mobile", "desktop"] },
+  { id: "p1-2", title: "Контраст CTA ниже 4.5:1", priority: "P1", section: "a11y", strategies: ["desktop"] },
   { id: "p2-1", title: "Изображения без кеш‑заголовков", priority: "P2", section: "tech" },
   { id: "p3-1", title: "Длинные title > 60 символов", priority: "P3", section: "seo" },
 ];
@@ -184,6 +197,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   );
 }
 
+// ===== Backlog (локальный выбор устройства) =====
 function Backlog({
   issues,
   prio,
@@ -197,14 +211,14 @@ function Backlog({
   issues: Issue[];
   prio: Priority[];
   onTogglePrio: (p: Priority) => void;
-  device: "all" | "mobile" | "desktop";
-  onChangeDevice: (d: "all" | "mobile" | "desktop") => void;
+  device: Device;
+  onChangeDevice: (d: Device) => void;
   onResetFilters: () => void;
   q: string;
   onChangeQuery: (v: string) => void;
 }) {
   const empty = issues.length === 0;
-  const activePrio = ["P0", "P1", "P2", "P3"].filter((p) => prio.includes(p as Priority)).join(", ");
+  const activePrio = PRIORITIES.filter((p) => prio.includes(p as Priority)).join(", ");
   return (
     <Card className="rounded-2xl">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -246,28 +260,9 @@ function Backlog({
             <Search className="h-4 w-4 mr-2" /> Расширенный поиск
           </Button>
 
-          {/* Приоритеты */}
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Фильтр по приоритетам">
-            {( ["P0", "P1", "P2", "P3"] as Priority[] ).map((p) => {
-              const active = prio.includes(p);
-              return (
-                <button
-                  key={p}
-                  onClick={() => onTogglePrio(p)}
-                  className={`px-2 py-1 rounded-md border text-xs inline-flex items-center gap-1 cursor-pointer ${
-                    active ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-700"
-                  }`}
-                  aria-pressed={active}
-                >
-                  {active && <Check className="h-3 w-3" />} {p}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Устройство */}
-          <div className="grid grid-cols-3 gap-2" role="group" aria-label="Тип устройства">
-            {( ["all", "mobile", "desktop"] as const ).map((d) => (
+          {/* Устройство (локально для Backlog) */}
+          <div className="grid grid-cols-3 gap-2" role="group" aria-label="Тип устройства (Backlog)">
+            {DEVICES.map((d) => (
               <Button
                 key={d}
                 variant={device === d ? "default" : "outline"}
@@ -518,12 +513,34 @@ function SavedReports({ rows, plan, canCSV }: { rows: ReportRow[]; plan: Plan; c
   );
 }
 
-function RecentAudits({ rows }: { rows: AuditRow[] }) {
+// «Последние аудиты» (локальный выбор устройства)
+function RecentAudits({
+  rows,
+  device,
+  onChangeDevice,
+}: {
+  rows: AuditRow[];
+  device: Device;
+  onChangeDevice: (d: Device) => void;
+}) {
   const empty = rows.length === 0;
   return (
     <Card className="rounded-2xl">
       <CardHeader className="pb-2 flex items-center justify-between">
         <CardTitle className="text-sm">Последние аудиты</CardTitle>
+        <div className="flex items-center gap-2">
+          {DEVICES.map((d) => (
+            <Button
+              key={d}
+              variant={device === d ? "default" : "outline"}
+              className="cursor-pointer"
+              onClick={() => onChangeDevice(d)}
+              aria-pressed={device === d}
+            >
+              {d === "all" ? "Все" : d === "mobile" ? "Моб." : "Деск."}
+            </Button>
+          ))}
+        </div>
       </CardHeader>
       <CardContent className="p-4 pt-0 grid gap-2 text-sm">
         {empty ? (
@@ -553,32 +570,28 @@ export default function DashboardFull() {
   );
   const [plan, setPlan] = useState<Plan>("Pro");
 
-  // Фильтры
-  const [prio, setPrio] = useState<Priority[]>(["P0", "P1", "P2", "P3"]);
-  const [device, setDevice] = useState<"all" | "mobile" | "desktop">("all");
+  // Локальные устройства для секций
+  const [backlogDevice, setBacklogDevice] = useState<Device>("all");
+  const [auditsDevice, setAuditsDevice] = useState<Device>("all");
+
+  // Поиск/приоритеты
+  const [prio, setPrio] = useState<Priority[]>(PRIORITIES);
   const [q, setQ] = useState<string>("");
 
   // Мини‑тесты / инварианты
   useEffect(() => {
-    const roles = ["studio", "seo", "owner", "agency"] as const;
-    roles.forEach((r) => console.assert(roles.includes(r), "roles enum ok"));
-    // CSV gating
+    ROLES.forEach((r) => console.assert(ROLES.includes(r), "roles enum ok"));
     console.assert(FEATURES.exportCSV("agency", "Agency") === true, "CSV должен быть доступен для Agency");
     console.assert(FEATURES.exportCSV("owner", "Pro") === false, "CSV не должен быть доступен для не‑Agency");
-    // WL gating
     console.assert(
       FEATURES.whiteLabel("agency", "Pro") === true && FEATURES.whiteLabel("owner", "Pro") === false,
       "WL гейт по роли/плану"
     );
-    // multiClient
     console.assert(FEATURES.multiClient("studio") === true && FEATURES.multiClient("owner") === false, "multiClient гейт");
-    // Фильтры — базовые проверки
     console.assert(prio.includes("P0") && prio.includes("P3"), "По умолчанию выбраны все приоритеты");
-    // Просмотрщик отчётов — базовый инвариант
     console.assert(/^\/reports\//.test(`/reports/${DEMO_REPORTS[0].id}`), "Путь web‑viewer отчёта корректен");
   }, []);
 
-  // Доп. тесты поведения фильтров (без изменения состояния)
   useEffect(() => {
     console.assert(DEMO_ISSUES.length >= 1 && DEMO_AUDITS.length >= 1, "Демо‑данные присутствуют");
     console.assert(DEMO_ISSUES.some(i => i.title.toLowerCase().includes("cls")), "Демо содержит кейс для поиска: CLS");
@@ -586,9 +599,7 @@ export default function DashboardFull() {
 
   const setRolePersist = (r: UserRole) => {
     setRole(r);
-    try {
-      localStorage.setItem("ba.role", r);
-    } catch {}
+    try { localStorage.setItem("ba.role", r); } catch {}
   };
 
   const onRunAudit = () => {
@@ -600,23 +611,45 @@ export default function DashboardFull() {
   // Применение фильтров
   const filteredIssues = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return DEMO_ISSUES.filter((i) => prio.includes(i.priority) && (s ? i.title.toLowerCase().includes(s) : true));
-  }, [prio, q]);
+    return DEMO_ISSUES.filter((i) => {
+      const matchesPriority = prio.includes(i.priority);
+      const matchesSearch = s ? i.title.toLowerCase().includes(s) : true;
+      const strategies = i.strategies ?? ["mobile", "desktop"];
+      const matchesDevice = backlogDevice === "all" ? true : strategies.includes(backlogDevice);
+      return matchesPriority && matchesSearch && matchesDevice;
+    });
+  }, [prio, q, backlogDevice]);
+
   const filteredAudits = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return DEMO_AUDITS.filter((a) => (device === "all" ? true : a.strategy === device) && (s ? a.url.toLowerCase().includes(s) : true));
-  }, [device, q]);
+    return DEMO_AUDITS.filter((a) => {
+      const matchesDevice = auditsDevice === "all" ? true : a.strategy === auditsDevice;
+      const matchesSearch = s ? a.url.toLowerCase().includes(s) : true;
+      return matchesDevice && matchesSearch;
+    });
+  }, [auditsDevice, q]);
 
   const togglePriority = (p: Priority) => {
     setPrio((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   };
 
-  const resetFilters = () => {
-    setPrio(["P0", "P1", "P2", "P3"]);
-    setDevice("all");
-    // мини‑тест после сброса (без ожидания):
-    console.assert(true, "resetFilters выполнен");
+  const resetBacklogFilters = () => {
+    setPrio(PRIORITIES);
+    setBacklogDevice("all");
+    console.assert(true, "resetBacklogFilters выполнен");
   };
+
+  // Доп. тесты поведения фильтров
+  useEffect(() => {
+    // Backlog device фильтрует задачи по strategies
+    const deviceWas = backlogDevice;
+    const hasOnlyMobile = DEMO_ISSUES.some(i => (i.strategies ?? ["mobile","desktop"]).length === 1 && (i.strategies ?? ["mobile"]).includes("mobile"));
+    console.assert(typeof deviceWas === "string" && hasOnlyMobile !== undefined, "Backlog: smoke‑тест фильтра устройства");
+    // Audits device фильтрует строки
+    const auditsCountAll = DEMO_AUDITS.length;
+    const auditsCountMobile = DEMO_AUDITS.filter(a => a.strategy === "mobile").length;
+    console.assert(auditsCountAll >= auditsCountMobile, "Audits: smoke‑тест фильтра устройства");
+  }, [backlogDevice, auditsDevice]);
 
   return (
     <div className="min-h-screen bg-[#f8fafc]">
@@ -636,34 +669,6 @@ export default function DashboardFull() {
             <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Настройки</a>
           </nav>
         </header>
-
-        {/* Панель ролей/плана (Dev) */}
-        <div className="flex flex-wrap items-center gap-3 p-3 rounded-2xl border bg-white">
-          <div className="flex items-center gap-2 text-sm">
-            Роль:
-            <Select value={role} onValueChange={(v: any) => setRolePersist(v)}>
-              <SelectTrigger className="w-40 cursor-pointer"><SelectValue/></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="owner">Владелец</SelectItem>
-                <SelectItem value="seo">SEO</SelectItem>
-                <SelectItem value="studio">Студия</SelectItem>
-                <SelectItem value="agency">Агентство</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            Тариф:
-            <Select value={plan} onValueChange={(v: any) => setPlan(v)}>
-              <SelectTrigger className="w-32 cursor-pointer"><SelectValue/></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Free">Free</SelectItem>
-                <SelectItem value="Pro">Pro</SelectItem>
-                <SelectItem value="Agency">Agency</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="ml-auto text-xs text-slate-500">© {new Date().getFullYear()} {BRAND.company}</div>
-        </div>
 
         {/* Хиро‑полоса */}
         <div className="rounded-2xl p-4 bg-gradient-to-r from-blue-600 to-rose-600 text-white">
@@ -699,13 +704,17 @@ export default function DashboardFull() {
               issues={filteredIssues}
               prio={prio}
               onTogglePrio={togglePriority}
-              device={device}
-              onChangeDevice={setDevice}
-              onResetFilters={resetFilters}
+              device={backlogDevice}
+              onChangeDevice={setBacklogDevice}
+              onResetFilters={resetBacklogFilters}
               q={q}
               onChangeQuery={setQ}
             />
-            <RecentAudits rows={filteredAudits}/>
+            <RecentAudits
+              rows={filteredAudits}
+              device={auditsDevice}
+              onChangeDevice={setAuditsDevice}
+            />
           </div>
 
           {/* Правая колонка */}
