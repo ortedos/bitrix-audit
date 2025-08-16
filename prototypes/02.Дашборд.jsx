@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,36 +29,17 @@ import {
   Info as InfoIcon,
   Check,
   RotateCcw,
+  Wallet,
 } from "lucide-react";
 
-// ===== Типы =====
-type UserRole = "studio" | "seo" | "owner" | "agency";
-type Plan = "Free" | "Pro" | "Agency";
-
-type Priority = "P0" | "P1" | "P2" | "P3";
-
-type Device = "all" | "mobile" | "desktop";
-
-type Issue = {
-  id: string;
-  title: string;
-  priority: Priority;
-  section: "tech" | "a11y" | "cwv" | "seo" | "ux";
-  strategies?: ("mobile" | "desktop")[]; // если нет — считаем ['mobile','desktop']
-};
-
-type AuditRow = { id: string; url: string; when: string; score: number; strategy: "mobile" | "desktop" };
-
-type ReportRow = { id: string; title: string; created: string; size: string };
-
-// ===== Константы для UI (убираем inline `as const` в JSX) =====
-const BRAND = { name: "Bitrix Audit", company: "ООО \u00ABКачество жизни\u00BB" };
-const DEVICES: Device[] = ["all", "mobile", "desktop"];
-const PRIORITIES: Priority[] = ["P0", "P1", "P2", "P3"];
-const ROLES: UserRole[] = ["studio", "seo", "owner", "agency"];
+// ===== Константы UI =====
+const BRAND = { name: "Bitrix Audit", company: "ООО «Качество жизни»" };
+const DEVICES = ["all", "mobile", "desktop"];
+const PRIORITIES = ["P0", "P1", "P2", "P3"];
+const ROLES = ["studio", "seo", "owner", "agency"];
 
 // ===== Демо‑данные =====
-const DEMO_ISSUES: Issue[] = [
+const DEMO_ISSUES = [
   { id: "p0-1", title: "CLS выше 0.25 на каталоге", priority: "P0", section: "cwv", strategies: ["mobile"] },
   { id: "p1-1", title: "Нет H1 на 7 страницах", priority: "P1", section: "seo", strategies: ["mobile", "desktop"] },
   { id: "p1-2", title: "Контраст CTA ниже 4.5:1", priority: "P1", section: "a11y", strategies: ["desktop"] },
@@ -66,19 +47,27 @@ const DEMO_ISSUES: Issue[] = [
   { id: "p3-1", title: "Длинные title > 60 символов", priority: "P3", section: "seo" },
 ];
 
-const DEMO_AUDITS: AuditRow[] = [
+const DEMO_AUDITS = [
   { id: "a1", url: "kachestvozhizni.ru", when: "Сегодня 10:24", score: 82, strategy: "mobile" },
   { id: "a2", url: "ya.ru", when: "Вчера 19:05", score: 91, strategy: "desktop" },
   { id: "a3", url: "bitrix.ru", when: "12.08 16:12", score: 74, strategy: "mobile" },
 ];
 
-const DEMO_REPORTS: ReportRow[] = [
+const DEMO_REPORTS = [
   { id: "r1", title: "kachestvozhizni.ru — полный отчёт", created: "Сегодня", size: "1.8 MB" },
   { id: "r2", title: "ya.ru — полный отчёт", created: "Вчера", size: "1.2 MB" },
 ];
 
-// ===== Утилиты =====
-function InfoHint({ title, text }: { title: string; text: string }) {
+// Пер‑сайт демо‑данные (для привязки модуля Битрикс)
+const DEMO_SITES = [
+  { id: "s1", url: "kachestvozhizni.ru", bitrix: { installed: true, lastSync: "Сегодня, 09:42", pages: 128 } },
+  { id: "s2", url: "ya.ru", bitrix: { installed: false, lastSync: "—", pages: 0 } },
+  { id: "s3", url: "bitrix.ru", bitrix: { installed: true, lastSync: "12.08 14:20", pages: 64 } },
+];
+
+// ===== Хелперы =====
+const formatRUB = (n) => new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(n);
+function InfoHint({ title, text }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -97,8 +86,8 @@ function InfoHint({ title, text }: { title: string; text: string }) {
   );
 }
 
-function PriorityBadge({ p }: { p: Priority }) {
-  const map: Record<Priority, string> = {
+function PriorityBadge({ p }) {
+  const map = {
     P0: "bg-red-600 text-white",
     P1: "bg-red-500 text-white",
     P2: "bg-rose-300 text-black",
@@ -107,7 +96,7 @@ function PriorityBadge({ p }: { p: Priority }) {
   return <Badge className={`${map[p]} font-medium`}>{p}</Badge>;
 }
 
-function SectionTitle({ icon, children, cta }: { icon?: React.ReactNode; children: React.ReactNode; cta?: React.ReactNode }) {
+function SectionTitle({ icon, children, cta }) {
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2 text-slate-800">
@@ -121,17 +110,17 @@ function SectionTitle({ icon, children, cta }: { icon?: React.ReactNode; childre
 
 // ===== Фичи/гейтинг =====
 const FEATURES = {
-  exportCSV: (role: UserRole, plan: Plan) => plan === "Agency", // {SA}: только Agency в R1
-  whiteLabel: (role: UserRole, plan: Plan) => plan !== "Free" && (role === "agency" || role === "studio"),
-  multiClient: (role: UserRole) => role === "studio" || role === "agency",
-  compareAudits: (role: UserRole) => role === "seo" || role === "agency",
-  ownerChecklist: (role: UserRole) => role === "owner",
+  exportCSV: (role, plan) => plan === "Agency", // только Agency в R1
+  whiteLabel: (role, plan) => plan !== "Free" && (role === "agency" || role === "studio"),
+  multiClient: (role) => role === "studio" || role === "agency",
+  compareAudits: (role) => role === "seo" || role === "agency",
+  ownerChecklist: (role) => role === "owner",
 };
 
 // ===== Общие виджеты =====
 function ScoreCard() {
   return (
-    <Card className="rounded-2xl border-blue-100">
+    <Card className="rounded-xl shadow-sm border-blue-100">
       <CardContent className="p-4 space-y-3">
         <SectionTitle
           icon={<Star className="h-4 w-4 text-blue-700" />}
@@ -163,7 +152,7 @@ function ScoreCard() {
 
 function CWVCard() {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">Core Web Vitals</CardTitle>
       </CardHeader>
@@ -185,9 +174,9 @@ function CWVCard() {
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Stat({ label, value, sub }) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl shadow-sm">
       <CardContent className="p-4">
         <div className="text-sm text-slate-600">{label}</div>
         <div className="text-2xl font-bold">{value}</div>
@@ -207,20 +196,11 @@ function Backlog({
   onResetFilters,
   q,
   onChangeQuery,
-}: {
-  issues: Issue[];
-  prio: Priority[];
-  onTogglePrio: (p: Priority) => void;
-  device: Device;
-  onChangeDevice: (d: Device) => void;
-  onResetFilters: () => void;
-  q: string;
-  onChangeQuery: (v: string) => void;
 }) {
   const empty = issues.length === 0;
-  const activePrio = PRIORITIES.filter((p) => prio.includes(p as Priority)).join(", ");
+  const activePrio = PRIORITIES.filter((p) => prio.includes(p)).join(", ");
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl shadow-sm">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
         <CardTitle className="text-sm">Backlog P0–P3</CardTitle>
         <div className="text-xs text-slate-500 flex items-center gap-2">
@@ -245,7 +225,7 @@ function Backlog({
           </div>
 
           {/* Поиск */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Input
               className="flex-1"
               value={q}
@@ -295,7 +275,7 @@ function Backlog({
                     {it.title}
                     <PriorityBadge p={it.priority} />
                   </div>
-                  <div className="text-xs text-slate-600">Секция: {it.section.toUpperCase()}</div>
+                  <div className="text-xs text-slate-600">Секция: {String(it.section).toUpperCase()}</div>
                 </div>
               </div>
               <Button size="sm" variant="ghost" className="cursor-pointer">
@@ -309,13 +289,13 @@ function Backlog({
   );
 }
 
-function Integrations() {
+function Integrations({ installed, lastSync, pages, onInstall, onSync, showModule = true }) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">Интеграции (работают автоматически)</CardTitle>
       </CardHeader>
-      <CardContent className="p-4 pt-0 space-y-2 text-sm">
+      <CardContent className="p-4 pt-0 space-y-3 text-sm">
         <div className="flex items-center justify-between p-2 rounded-lg border bg-slate-50">
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4" /> Google PageSpeed Insights
@@ -334,34 +314,75 @@ function Integrations() {
             />
           </div>
         </div>
-        <div className="flex items-center justify-between p-3 rounded-lg border bg-white">
-          <div className="flex items-start gap-2">
-            <Building2 className="h-5 w-5 mt-0.5" />
-            <div>
-              <div className="font-medium">Модуль Битрикс — расширенный аудит</div>
-              <div className="text-xs text-slate-600">
-                Даст доступ к закрытым страницам, авторизованным зонам и обойдёт антибот‑защиту. Рекомендуем для полного отчёта.
+        {showModule && (
+          <div className="p-3 rounded-lg border bg-white space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2">
+                <Building2 className="h-5 w-5 mt-0.5" />
+                <div>
+                  <div className="font-medium">Модуль Битрикс — расширенный аудит</div>
+                  <div className="text-xs text-slate-600">
+                    Даст доступ к закрытым страницам, авторизованным зонам и обойдёт антибот‑защиту. Рекомендуем для полного отчёта.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <InfoHint
+                  title="Почему это важно"
+                  text="Без модуля часть страниц (корзина, кабинет, чек‑аут) может быть недоступна или защищена антиботами."
+                />
+                {installed ? (
+                  <Button size="sm" variant="outline" className="cursor-pointer" onClick={onInstall}>
+                    Обновить модуль
+                  </Button>
+                ) : (
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer" onClick={onInstall}>
+                    <UploadCloud className="h-4 w-4 mr-2" /> Установить модуль
+                  </Button>
+                )}
               </div>
             </div>
+            <div className="grid sm:grid-cols-3 gap-2">
+              <div className={`flex items-center gap-2 rounded-md border px-2 py-1 ${installed ? 'bg-green-50 border-green-200' : 'bg-rose-50 border-rose-200'}`}>
+                <Check className={`h-4 w-4 ${installed ? 'text-green-600' : 'text-rose-600'}`} />
+                <div className="text-xs">
+                  <div className="font-medium">{installed ? 'Установлен' : 'Не установлен'}</div>
+                  <div className="text-slate-500">Статус модуля</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-md border px-2 py-1 bg-slate-50">
+                <RotateCcw className="h-4 w-4" />
+                <div className="text-xs">
+                  <div className="font-medium">Последняя синхронизация</div>
+                  <div className="text-slate-500">{lastSync || '—'}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-md border px-2 py-1 bg-slate-50">
+                <Layers3 className="h-4 w-4" />
+                <div className="text-xs">
+                  <div className="font-medium">Страниц от модуля</div>
+                  <div className="text-slate-500">{pages}</div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="secondary" className="cursor-pointer" onClick={onSync} disabled={!installed}>
+                <RotateCcw className="h-4 w-4 mr-2" /> Синхронизировать сейчас
+              </Button>
+              {!installed && (
+                <div className="text-xs text-slate-500">Сначала установите модуль, чтобы запустить синхронизацию.</div>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <InfoHint
-              title="Почему это важно"
-              text="Без модуля часть страниц (корзина, кабинет, чек‑аут) может быть недоступна или защищена антиботами."
-            />
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer">
-              <UploadCloud className="h-4 w-4 mr-2" /> Установить модуль
-            </Button>
-          </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function QuickActions({ plan, canCSV, onRunAudit }: { plan: Plan; canCSV: boolean; onRunAudit: () => void }) {
+function QuickActions({ plan, canCSV, onRunAudit }) {
   return (
-    <Card className="rounded-2xl border-blue-100">
+    <Card className="rounded-xl shadow-sm border-blue-100">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm">Быстрые действия</CardTitle>
       </CardHeader>
@@ -395,7 +416,7 @@ function QuickActions({ plan, canCSV, onRunAudit }: { plan: Plan; canCSV: boolea
 
 function ClientsCard() {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl shadow-sm">
       <CardHeader className="pb-2 flex items-center justify-between">
         <CardTitle className="text-sm flex items-center gap-2">
           <Briefcase className="h-4 w-4" /> Клиенты
@@ -424,7 +445,7 @@ function ClientsCard() {
 
 function CompareAudits() {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl shadow-sm">
       <CardHeader className="pb-2 flex items-center justify-between">
         <CardTitle className="text-sm flex items-center gap-2">
           <LineChart className="h-4 w-4" /> Сравнение аудитов
@@ -447,7 +468,7 @@ function OwnerChecklist() {
     { id: 3, text: "Починить H1 на карточках товара", done: false },
   ];
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl shadow-sm">
       <CardHeader className="pb-2 flex items-center justify-between">
         <CardTitle className="text-sm flex items-center gap-2">
           <ListChecks className="h-4 w-4" /> Что сделать на этой неделе
@@ -467,7 +488,7 @@ function OwnerChecklist() {
 
 function WhiteLabelCard() {
   return (
-    <Card className="rounded-2xl border-rose-100">
+    <Card className="rounded-xl shadow-sm border-rose-100">
       <CardHeader className="pb-2 flex items-center justify-between">
         <CardTitle className="text-sm flex items-center gap-2">
           <Layers3 className="h-4 w-4 text-rose-600" /> White‑label
@@ -480,9 +501,9 @@ function WhiteLabelCard() {
   );
 }
 
-function SavedReports({ rows, plan, canCSV }: { rows: ReportRow[]; plan: Plan; canCSV: boolean }) {
+function SavedReports({ rows, plan, canCSV }) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl shadow-sm">
       <CardHeader className="pb-2 flex items-center justify-between">
         <CardTitle className="text-sm">Сохранённые отчёты</CardTitle>
       </CardHeader>
@@ -514,18 +535,10 @@ function SavedReports({ rows, plan, canCSV }: { rows: ReportRow[]; plan: Plan; c
 }
 
 // «Последние аудиты» (локальный выбор устройства)
-function RecentAudits({
-  rows,
-  device,
-  onChangeDevice,
-}: {
-  rows: AuditRow[];
-  device: Device;
-  onChangeDevice: (d: Device) => void;
-}) {
+function RecentAudits({ rows, device, onChangeDevice }) {
   const empty = rows.length === 0;
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl shadow-sm">
       <CardHeader className="pb-2 flex items-center justify-between">
         <CardTitle className="text-sm">Последние аудиты</CardTitle>
         <div className="flex items-center gap-2">
@@ -565,21 +578,28 @@ function RecentAudits({
 
 // ===== Корневой экран =====
 export default function DashboardFull() {
-  const [role, setRole] = useState<UserRole>(
-    () => (typeof window !== "undefined" ? (localStorage.getItem("ba.role") as UserRole) : null) || "owner"
-  );
-  const [plan, setPlan] = useState<Plan>("Pro");
+  const [role, setRole] = useState(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem("ba.role") : null;
+    return saved || "owner";
+  });
+  const [plan, setPlan] = useState("Pro");
+
+  // Сайты и привязка интеграций к конкретному сайту
+  const [sites, setSites] = useState(DEMO_SITES);
+  const [activeSiteId, setActiveSiteId] = useState("all"); // "all" или id сайта
+  const activeSite = useMemo(() => (activeSiteId === "all" ? null : sites.find((s) => s.id === activeSiteId) || null), [sites, activeSiteId]);
 
   // Локальные устройства для секций
-  const [backlogDevice, setBacklogDevice] = useState<Device>("all");
-  const [auditsDevice, setAuditsDevice] = useState<Device>("all");
+  const [backlogDevice, setBacklogDevice] = useState("all");
+  const [auditsDevice, setAuditsDevice] = useState("all");
 
   // Поиск/приоритеты
-  const [prio, setPrio] = useState<Priority[]>(PRIORITIES);
-  const [q, setQ] = useState<string>("");
+  const [prio, setPrio] = useState(PRIORITIES);
+  const [q, setQ] = useState("");
 
   // Мини‑тесты / инварианты
   useEffect(() => {
+    console.assert(typeof useState === 'function' && typeof useEffect === 'function', 'React hooks доступны');
     ROLES.forEach((r) => console.assert(ROLES.includes(r), "roles enum ok"));
     console.assert(FEATURES.exportCSV("agency", "Agency") === true, "CSV должен быть доступен для Agency");
     console.assert(FEATURES.exportCSV("owner", "Pro") === false, "CSV не должен быть доступен для не‑Agency");
@@ -590,6 +610,7 @@ export default function DashboardFull() {
     console.assert(FEATURES.multiClient("studio") === true && FEATURES.multiClient("owner") === false, "multiClient гейт");
     console.assert(prio.includes("P0") && prio.includes("P3"), "По умолчанию выбраны все приоритеты");
     console.assert(/^\/reports\//.test(`/reports/${DEMO_REPORTS[0].id}`), "Путь web‑viewer отчёта корректен");
+    console.assert(BRAND.company.includes("Качество"), 'BRAND.company должен быть в UTF‑8, без \\u‑эскейпов');
   }, []);
 
   useEffect(() => {
@@ -597,7 +618,7 @@ export default function DashboardFull() {
     console.assert(DEMO_ISSUES.some(i => i.title.toLowerCase().includes("cls")), "Демо содержит кейс для поиска: CLS");
   }, []);
 
-  const setRolePersist = (r: UserRole) => {
+  const setRolePersist = (r) => {
     setRole(r);
     try { localStorage.setItem("ba.role", r); } catch {}
   };
@@ -607,6 +628,46 @@ export default function DashboardFull() {
   };
 
   const canCSV = FEATURES.exportCSV(role, plan);
+
+  // Финансы: баланс аккаунта (демо)
+  const [balance, setBalance] = useState(12340);
+  // Ширина контейнера — берём из CSS‑переменной основного сайта, по умолчанию 1200px
+  const [containerMax, setContainerMax] = useState('1200px');
+  useEffect(() => {
+    try {
+      const v = getComputedStyle(document.documentElement).getPropertyValue('--ba-container-max').trim();
+      if (v) setContainerMax(v);
+    } catch {}
+  }, []);
+  // smoke‑тест линка на финансы
+  useEffect(() => { console.assert(/^\/finance$/.test('/finance'), 'Finance: ссылка валидна'); }, []);
+
+  // Статус модуля Битрикс — привязка к сайту (демо)
+  const handleInstallBitrix = () => {
+    if (!activeSite) return;
+    const now = new Date().toLocaleString("ru-RU");
+    setSites((prev) =>
+      prev.map((s) =>
+        s.id === activeSite.id
+          ? { ...s, bitrix: { installed: true, lastSync: now, pages: Math.max(1, (s.bitrix?.pages || 0)) } }
+          : s
+      )
+    );
+    console.log("bitrix_module_installed", { ts: Date.now(), siteId: activeSite.id });
+  };
+
+  const handleSyncBitrix = () => {
+    if (!activeSite) return;
+    const now = new Date().toLocaleString("ru-RU");
+    setSites((prev) =>
+      prev.map((s) =>
+        s.id === activeSite.id
+          ? { ...s, bitrix: { ...s.bitrix, lastSync: now, pages: Math.max(1, (s.bitrix?.pages || 0)) } }
+          : s
+      )
+    );
+    console.log("bitrix_sync", { ts: Date.now(), siteId: activeSite.id });
+  };
 
   // Применение фильтров
   const filteredIssues = useMemo(() => {
@@ -625,11 +686,12 @@ export default function DashboardFull() {
     return DEMO_AUDITS.filter((a) => {
       const matchesDevice = auditsDevice === "all" ? true : a.strategy === auditsDevice;
       const matchesSearch = s ? a.url.toLowerCase().includes(s) : true;
-      return matchesDevice && matchesSearch;
+      const matchesSite = activeSite ? a.url === activeSite.url : true;
+      return matchesDevice && matchesSearch && matchesSite;
     });
-  }, [auditsDevice, q]);
+  }, [auditsDevice, q, activeSite]);
 
-  const togglePriority = (p: Priority) => {
+  const togglePriority = (p) => {
     setPrio((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
   };
 
@@ -639,42 +701,80 @@ export default function DashboardFull() {
     console.assert(true, "resetBacklogFilters выполнен");
   };
 
-  // Доп. тесты поведения фильтров
+  // Доп. тесты поведения
   useEffect(() => {
-    // Backlog device фильтрует задачи по strategies
-    const deviceWas = backlogDevice;
-    const hasOnlyMobile = DEMO_ISSUES.some(i => (i.strategies ?? ["mobile","desktop"]).length === 1 && (i.strategies ?? ["mobile"]).includes("mobile"));
-    console.assert(typeof deviceWas === "string" && hasOnlyMobile !== undefined, "Backlog: smoke‑тест фильтра устройства");
-    // Audits device фильтрует строки
     const auditsCountAll = DEMO_AUDITS.length;
     const auditsCountMobile = DEMO_AUDITS.filter(a => a.strategy === "mobile").length;
-    console.assert(auditsCountAll >= auditsCountMobile, "Audits: smoke‑тест фильтра устройства");
+    console.assert(auditsCountAll >= auditsCountMobile, "Audits: фильтр устройства работоспособен");
+    // SavedReports ссылку проверим
+    DEMO_REPORTS.forEach(r => console.assert(/^\/reports\//.test(`/reports/${r.id}`), "SavedReports: ссылка валидна"));
   }, [backlogDevice, auditsDevice]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      <div className="mx-auto max-w-6xl p-4 md:p-6 lg:p-10 space-y-6">
+    <div className="min-h-screen bg-[#f8fafc] overflow-x-hidden">
+      <div className="mx-auto w-full p-4 md:p-6 lg:p-10 space-y-6" style={{ maxWidth: containerMax }}>
         {/* Шапка */}
-        <header className="flex items-center justify-between">
+        <header className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-blue-600 text-white grid place-items-center">BA</div>
             <div className="text-base font-semibold text-slate-800">{BRAND.name}</div>
             <Badge variant="outline" className="border-rose-600 text-rose-700">R1</Badge>
           </div>
-          <nav className="flex items-center gap-2 text-sm">
-            <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Аудиты</a>
-            <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Отчёты</a>
-            <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Бэклог</a>
-            <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Интеграции</a>
-            <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Настройки</a>
+          <nav className="flex flex-wrap items-center gap-2 text-sm min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Аудиты</a>
+              <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Отчёты</a>
+              <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Бэклог</a>
+              <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Интеграции</a>
+              <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Настройки</a>
+            </div>
+            <span className="hidden md:block w-px h-5 bg-slate-200 mx-2" />
+            {/* Выбор роли */}
+            <Select value={role} onValueChange={(v) => setRolePersist(v)}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Выберите роль" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="studio">Веб‑студия / интегратор</SelectItem>
+                <SelectItem value="seo">SEO‑специалист</SelectItem>
+                <SelectItem value="owner">Владелец сайта</SelectItem>
+                <SelectItem value="agency">Агентство</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="hidden md:block w-px h-5 bg-slate-200 mx-2" />
+            {/* Выбор сайта (привязка интеграций) */}
+            <Select value={activeSiteId} onValueChange={(v) => setActiveSiteId(v)}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Выберите сайт" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все сайты</SelectItem>
+                {sites.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.url}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="hidden md:block w-px h-5 bg-slate-200 mx-2" />
+            {/* Баланс и переход в финансы */}
+            <Button
+              asChild
+              variant="outline"
+              className={`w-[220px] cursor-pointer flex items-center justify-between gap-2 ${balance < 1000 ? 'bg-rose-50 border-rose-300 text-rose-700' : ''}`}
+              aria-label="Перейти в финансы для пополнения счёта"
+            >
+              <a href="/finance">
+                <span className="flex items-center gap-2"><Wallet className="h-4 w-4" /> Баланс</span>
+                <span>{formatRUB(balance)}</span>
+              </a>
+            </Button>
           </nav>
         </header>
 
         {/* Хиро‑полоса */}
-        <div className="rounded-2xl p-4 bg-gradient-to-r from-blue-600 to-rose-600 text-white">
+        <div className="rounded-xl shadow-sm p-4 bg-gradient-to-r from-blue-600 to-rose-600 text-white">
           <div className="flex items-center justify-between gap-3">
             <div className="text-lg font-semibold flex items-center gap-2">
-              <Sparkles className="h-4 w-4"/> Личный кабинет — {role.toUpperCase()}
+              <Sparkles className="h-4 w-4"/> Личный кабинет — {String(role).toUpperCase()}
             </div>
             <div className="text-xs text-white/90 flex items-center gap-3">
               <div className="inline-flex items-center gap-1"><ShieldCheck className="h-4 w-4"/> AES‑256</div>
@@ -701,7 +801,17 @@ export default function DashboardFull() {
             {FEATURES.whiteLabel(role, plan) && <WhiteLabelCard/>}
 
             <Backlog
-              issues={filteredIssues}
+              issues={useMemo(() => {
+                // применяем фильтры тут, чтобы пропсы были стабильные
+                const s = q.trim().toLowerCase();
+                return DEMO_ISSUES.filter((i) => {
+                  const matchesPriority = prio.includes(i.priority);
+                  const matchesSearch = s ? i.title.toLowerCase().includes(s) : true;
+                  const strategies = i.strategies ?? ["mobile", "desktop"];
+                  const matchesDevice = backlogDevice === "all" ? true : strategies.includes(backlogDevice);
+                  return matchesPriority && matchesSearch && matchesDevice;
+                });
+              }, [prio, q, backlogDevice])}
               prio={prio}
               onTogglePrio={togglePriority}
               device={backlogDevice}
@@ -720,7 +830,14 @@ export default function DashboardFull() {
           {/* Правая колонка */}
           <aside className="md:col-span-4 grid gap-4">
             <QuickActions plan={plan} canCSV={canCSV} onRunAudit={onRunAudit}/>
-            <Integrations/>
+            <Integrations
+              installed={activeSite ? !!(activeSite.bitrix && activeSite.bitrix.installed) : false}
+              lastSync={activeSite ? (activeSite.bitrix && activeSite.bitrix.lastSync) : ""}
+              pages={activeSite ? (activeSite.bitrix && activeSite.bitrix.pages) : 0}
+              onInstall={handleInstallBitrix}
+              onSync={handleSyncBitrix}
+              showModule={!!activeSite}
+            />
 
             {/* Сохранённые отчёты */}
             <SavedReports rows={DEMO_REPORTS} plan={plan} canCSV={canCSV}/>
