@@ -191,6 +191,8 @@ function Backlog({
   device,
   onChangeDevice,
   onResetFilters,
+  q,
+  onChangeQuery,
 }: {
   issues: Issue[];
   prio: Priority[];
@@ -198,6 +200,8 @@ function Backlog({
   device: "all" | "mobile" | "desktop";
   onChangeDevice: (d: "all" | "mobile" | "desktop") => void;
   onResetFilters: () => void;
+  q: string;
+  onChangeQuery: (v: string) => void;
 }) {
   const empty = issues.length === 0;
   const activePrio = ["P0", "P1", "P2", "P3"].filter((p) => prio.includes(p as Priority)).join(", ");
@@ -214,7 +218,7 @@ function Backlog({
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-0 space-y-3">
-        {/* ВСТРОЕННЫЕ ФИЛЬТРЫ */}
+        {/* ВСТРОЕННЫЕ ФИЛЬТРЫ + ПОИСК */}
         <div className="grid gap-2 rounded-xl border bg-slate-50 p-2">
           <div className="flex items-center justify-between gap-2">
             <div className="text-xs font-medium text-slate-600">Фильтры</div>
@@ -225,6 +229,24 @@ function Backlog({
               <RotateCcw className="h-3.5 w-3.5" /> Сбросить
             </button>
           </div>
+
+          {/* Поиск */}
+          <div className="flex items-center gap-2">
+            <Input
+              className="flex-1"
+              value={q}
+              onChange={(e) => onChangeQuery(e.target.value)}
+              placeholder="Найти проблему или страницу"
+            />
+            {q && (
+              <button onClick={() => onChangeQuery("")} className="text-xs text-slate-500 hover:underline cursor-pointer">Очистить</button>
+            )}
+          </div>
+          <Button variant="ghost" className="justify-start cursor-pointer w-max">
+            <Search className="h-4 w-4 mr-2" /> Расширенный поиск
+          </Button>
+
+          {/* Приоритеты */}
           <div className="flex flex-wrap gap-2" role="group" aria-label="Фильтр по приоритетам">
             {( ["P0", "P1", "P2", "P3"] as Priority[] ).map((p) => {
               const active = prio.includes(p);
@@ -242,6 +264,8 @@ function Backlog({
               );
             })}
           </div>
+
+          {/* Устройство */}
           <div className="grid grid-cols-3 gap-2" role="group" aria-label="Тип устройства">
             {( ["all", "mobile", "desktop"] as const ).map((d) => (
               <Button
@@ -255,15 +279,17 @@ function Backlog({
               </Button>
             ))}
           </div>
+
           <div className="text-xs text-slate-500">
             Активно: {activePrio || "—"}
             {device !== "all" ? ` • Устройство: ${device}` : ""}
+            {q ? ` • Поиск: “${q}”` : ""}
           </div>
         </div>
 
         {/* СПИСОК ЗАДАЧ */}
         {empty ? (
-          <div className="p-3 rounded-lg border text-sm text-slate-600">Нет задач по выбранным фильтрам.</div>
+          <div className="p-3 rounded-lg border text-sm text-slate-600">Нет задач по выбранным условиям.</div>
         ) : (
           issues.slice(0, 50).map((it) => (
             <div key={it.id} className="flex items-start justify-between gap-2 p-2 rounded-lg border">
@@ -303,9 +329,6 @@ function Integrations() {
               text="Собираем метрики скорости и CWV автоматически. Никаких действий со стороны клиента не требуется."
             />
           </div>
-          <Badge variant="outline" className="border-green-600 text-green-700">
-            Активно
-          </Badge>
         </div>
         <div className="flex items-center justify-between p-2 rounded-lg border bg-slate-50">
           <div className="flex items-center gap-2">
@@ -315,9 +338,6 @@ function Integrations() {
               text="Глубокий техаудит и доступность. Запускается автоматически очередями, без ручной настройки."
             />
           </div>
-          <Badge variant="outline" className="border-green-600 text-green-700">
-            Активно
-          </Badge>
         </div>
         <div className="flex items-center justify-between p-3 rounded-lg border bg-white">
           <div className="flex items-start gap-2">
@@ -414,9 +434,7 @@ function CompareAudits() {
         <CardTitle className="text-sm flex items-center gap-2">
           <LineChart className="h-4 w-4" /> Сравнение аудитов
         </CardTitle>
-        <Button size="sm" variant="outline" className="cursor-pointer">
-          Добавить сайт
-        </Button>
+        <Button size="sm" variant="outline" className="cursor-pointer">Добавить сайт</Button>
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="h-24 rounded-xl border grid place-items-center text-xs text-slate-500">
@@ -484,9 +502,7 @@ function SavedReports({ rows, plan, canCSV }: { rows: ReportRow[]; plan: Plan; c
             </div>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="secondary" className="cursor-pointer" asChild>
-                <a href={`/reports/${r.id}`}>
-                  <Eye className="h-4 w-4 mr-1" />Открыть
-                </a>
+                <a href={`/reports/${r.id}`}><Eye className="h-4 w-4 mr-1"/>Открыть</a>
               </Button>
               <Button size="sm" variant="ghost" className="cursor-pointer disabled:opacity-50" disabled={plan === "Free"}>
                 <FileDown className="h-4 w-4 mr-1" /> PDF
@@ -610,9 +626,7 @@ export default function DashboardFull() {
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-lg bg-blue-600 text-white grid place-items-center">BA</div>
             <div className="text-base font-semibold text-slate-800">{BRAND.name}</div>
-            <Badge variant="outline" className="border-rose-600 text-rose-700">
-              R1
-            </Badge>
+            <Badge variant="outline" className="border-rose-600 text-rose-700">R1</Badge>
           </div>
           <nav className="flex items-center gap-2 text-sm">
             <a className="px-3 py-1 rounded-lg hover:bg-slate-50 cursor-pointer">Аудиты</a>
@@ -628,9 +642,7 @@ export default function DashboardFull() {
           <div className="flex items-center gap-2 text-sm">
             Роль:
             <Select value={role} onValueChange={(v: any) => setRolePersist(v)}>
-              <SelectTrigger className="w-40 cursor-pointer">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="w-40 cursor-pointer"><SelectValue/></SelectTrigger>
               <SelectContent>
                 <SelectItem value="owner">Владелец</SelectItem>
                 <SelectItem value="seo">SEO</SelectItem>
@@ -642,9 +654,7 @@ export default function DashboardFull() {
           <div className="flex items-center gap-2 text-sm">
             Тариф:
             <Select value={plan} onValueChange={(v: any) => setPlan(v)}>
-              <SelectTrigger className="w-32 cursor-pointer">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="w-32 cursor-pointer"><SelectValue/></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Free">Free</SelectItem>
                 <SelectItem value="Pro">Pro</SelectItem>
@@ -659,15 +669,11 @@ export default function DashboardFull() {
         <div className="rounded-2xl p-4 bg-gradient-to-r from-blue-600 to-rose-600 text-white">
           <div className="flex items-center justify-between gap-3">
             <div className="text-lg font-semibold flex items-center gap-2">
-              <Sparkles className="h-4 w-4" /> Личный кабинет — {role.toUpperCase()}
+              <Sparkles className="h-4 w-4"/> Личный кабинет — {role.toUpperCase()}
             </div>
             <div className="text-xs text-white/90 flex items-center gap-3">
-              <div className="inline-flex items-center gap-1">
-                <ShieldCheck className="h-4 w-4" /> AES‑256
-              </div>
-              <div className="inline-flex items-center gap-1">
-                <Star className="h-4 w-4" /> WCAG 2.1 AA
-              </div>
+              <div className="inline-flex items-center gap-1"><ShieldCheck className="h-4 w-4"/> AES‑256</div>
+              <div className="inline-flex items-center gap-1"><Star className="h-4 w-4"/> WCAG 2.1 AA</div>
             </div>
           </div>
         </div>
@@ -676,18 +682,18 @@ export default function DashboardFull() {
         <section className="grid md:grid-cols-12 gap-4 items-start">
           {/* Левая колонка */}
           <div className="md:col-span-8 grid gap-4">
-            <ScoreCard />
+            <ScoreCard/>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <CWVCard />
-              <Stat label="Ошибок P0" value="2" sub="Нужно исправить первыми" />
-              <Stat label="Ошибок P1–P3" value="11" sub="См. бэклог ниже" />
+              <CWVCard/>
+              <Stat label="Ошибок P0" value="2" sub="Нужно исправить первыми"/>
+              <Stat label="Ошибок P1–P3" value="11" sub="См. бэклог ниже"/>
             </div>
 
             {/* Ролевые особенности */}
-            {FEATURES.multiClient(role) && <ClientsCard />}
-            {FEATURES.compareAudits(role) && <CompareAudits />}
-            {FEATURES.ownerChecklist(role) && <OwnerChecklist />}
-            {FEATURES.whiteLabel(role, plan) && <WhiteLabelCard />}
+            {FEATURES.multiClient(role) && <ClientsCard/>}
+            {FEATURES.compareAudits(role) && <CompareAudits/>}
+            {FEATURES.ownerChecklist(role) && <OwnerChecklist/>}
+            {FEATURES.whiteLabel(role, plan) && <WhiteLabelCard/>}
 
             <Backlog
               issues={filteredIssues}
@@ -696,35 +702,19 @@ export default function DashboardFull() {
               device={device}
               onChangeDevice={setDevice}
               onResetFilters={resetFilters}
+              q={q}
+              onChangeQuery={setQ}
             />
-            <RecentAudits rows={filteredAudits} />
+            <RecentAudits rows={filteredAudits}/>
           </div>
 
           {/* Правая колонка */}
           <aside className="md:col-span-4 grid gap-4">
-            <QuickActions plan={plan} canCSV={canCSV} onRunAudit={onRunAudit} />
-            <Integrations />
-
-            {/* Поиск */}
-            <Card className="rounded-2xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Поиск по отчёту</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 grid gap-2">
-                <Input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="Найти проблему или страницу" />
-                <div className="flex items-center justify-between">
-                  <Button variant="ghost" className="justify-start cursor-pointer">
-                    <Search className="h-4 w-4 mr-2" /> Расширенный поиск
-                  </Button>
-                  {q && (
-                    <button onClick={() => setQ("")} className="text-xs text-slate-500 hover:underline cursor-pointer">Очистить</button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <QuickActions plan={plan} canCSV={canCSV} onRunAudit={onRunAudit}/>
+            <Integrations/>
 
             {/* Сохранённые отчёты */}
-            <SavedReports rows={DEMO_REPORTS} plan={plan} canCSV={canCSV} />
+            <SavedReports rows={DEMO_REPORTS} plan={plan} canCSV={canCSV}/>
           </aside>
         </section>
 
