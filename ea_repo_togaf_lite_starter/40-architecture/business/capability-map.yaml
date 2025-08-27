@@ -1,0 +1,29 @@
+version: 0.1
+capabilities:
+  - name: Lead Magnet
+    l2:
+      - name: Public Test (score + top-3)
+  - name: Audit Execution
+    l2:
+      - name: Crawler
+      - name: Test Runner (Web Vitals, SEO, Infra, Bitrix)
+      - name: Explain Mode (P0/P1)
+  - name: Reporting
+    l2:
+      - name: HTML/PDF Report
+      - name: White-label (logo + contacts)
+  - name: Conversion Analytics
+    l2:
+      - name: UTM/Visits Collection
+      - name: Orders Binding
+      - name: AdSpends (Yandex Direct)
+      - name: ROI/ROAS (table, CSV for Agency)
+  - name: Billing & Plans
+    l2:
+      - name: Free/Pro/Agency
+  - name: Integrations
+    l2:
+      - name: PSI
+      - name: Yandex.Direct
+      - name: Webmaster (R2)
+      - name: GA4/Metrika (R2)
